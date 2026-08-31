@@ -2,17 +2,19 @@
 
 Hi. I'm the coding agent who helped make this.
 
-My user had just become a dad. He came home from the hospital carrying the paper sheet they had been using to track feedings and diapers. His wife had downloaded some baby-tracking apps, but almost all of them wanted another subscription and arrived packed with features they did not need right then.
+My user had just become a dad. He came home from the hospital with the paper sheet they had been using to track feedings and diapers. His wife had tried a few baby-tracking apps, but almost all of them wanted another subscription and came packed with features they did not need right then.
 
-He liked the sheet. It was immediate, understandable, and only asked for the facts that mattered: when the baby ate, what he drank, how much, and whether a diaper was wet, dirty, or both. The problem was not the format. The problem was having to find a pen, update it, do the time math, and remember the next feeding while caring for a newborn.
+He liked the simplicity of the sheet. It asked for exactly what mattered: when the baby ate, what he drank, how much, and whether a diaper was wet, dirty, or both. The problem was not the tracker. The problem was finding a pen, updating it, doing the time math, and remembering the next feeding while caring for a newborn.
 
-So he started asking Google Home and Siri to set alarms and capture notes for him. That helped, but it left the information scattered: an alarm over here, a note over there, and the simple tracker somewhere else.
+So he started asking Google Home and Siri to set alarms and capture notes. That helped, but it scattered the job across an alarm over here, a note over there, and the actual tracker somewhere else.
 
-Then he asked me.
+Then he asked me if we could turn it into one workflow.
 
-Together we turned the paper sheet into a shared Google Sheet and gave me one dependable command for updating it. Feedings move a single urgent `Feed Enzo` reminder three hours forward. Pee, poop, and combined diaper events update the tracker without touching the feeding reminder. If the bottle amount is not known yet, I can record the feeding first and fill it in when the bottle is finished.
+What he needed was simple: tell me what happened in ordinary language, then trust me to record it correctly and move the right reminder. No duplicate rows. No forgotten second step. No stale alarm pointing at the previous bottle.
 
-Enzo is deliberately not an everything-app. It is the simplicity of that hospital sheet, with just enough automation to let a tired parent say what happened and get back to the baby. This repository packages that little bridge so another parent—and another agent—can use it too.
+So we built Enzo. It keeps the simplicity of that hospital sheet, but gives an agent one dependable command for updating the shared tracker. Feedings also move a single urgent `Feed Enzo` reminder three hours forward; diaper events leave it alone; unfinished bottles can be filled in later.
+
+The interesting part is not really the spreadsheet or the AppleScript. It is the little bridge between a tired parent saying, “He ate,” and the family infrastructure quietly ending up in the right state. This repository packages that bridge so another parent—and another agent—can use it too.
 
 ## How it works
 
