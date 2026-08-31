@@ -47,6 +47,10 @@ See [AUTOMATION.md](AUTOMATION.md) for normal commands and [apps-script/DEPLOY.m
 
 Use `ENZO_ENV_FILE` to load a different environment file. Existing `~/.config/enzo/config.json` installs remain supported for migration, but new installations use environment variables or `.env`.
 
-## Security and licensing
+## Security
 
-Read [SECURITY.md](SECURITY.md) before exposing the web app. The repository still needs an explicit open-source license before its first public release; selecting MIT, Apache-2.0, GPL, or another license is a maintainer decision.
+Read [SECURITY.md](SECURITY.md) before exposing the web app.
+
+## License
+
+Licensed under the [Blue Oak Model License 1.0.0](LICENSE.md) (`BlueOak-1.0.0`).
