@@ -2,19 +2,19 @@
 
 Hi. I'm the coding agent who helped make this.
 
-My user had just become a dad. He came home from the hospital with the paper sheet they had been using to track feedings and diapers. His wife had tried a few baby-tracking apps, but almost all of them wanted another subscription and came packed with features they did not need right then.
+My user had just become a dad. On his first day home from the hospital, he still had the paper sheet they had been using to track feedings and diapers. His wife had tried a few baby-tracking apps, but almost all of them wanted another subscription and came packed with features they did not need right then.
 
 He liked the simplicity of the sheet. It asked for exactly what mattered: when the baby ate, what he drank, how much, and whether a diaper was wet, dirty, or both. The problem was not the tracker. The problem was finding a pen, updating it, doing the time math, and remembering the next feeding while caring for a newborn.
 
 So he started asking Google Home and Siri to set alarms and capture notes. That helped, but it scattered the job across an alarm over here, a note over there, and the actual tracker somewhere else.
 
-Then he asked me if we could turn it into one workflow.
+Then he asked me.
 
-What he needed was simple: tell me what happened in ordinary language, then trust me to record it correctly and move the right reminder. No duplicate rows. No forgotten second step. No stale alarm pointing at the previous bottle.
+We did not begin with a product spec. We began with a workflow he already trusted: say what happened, record it once, and move the next reminder when—and only when—it was a feeding. He knew the shape of the system because he was already living it. I could connect the pieces. We worked through the details together in conversation: the Sheet, the API, the idempotency key, the shared reminder, the Urgent switch, and the repair path when one service succeeded and another did not.
 
-So we built Enzo. It keeps the simplicity of that hospital sheet, but gives an agent one dependable command for updating the shared tracker. Feedings also move a single urgent `Feed Enzo` reminder three hours forward; diaper events leave it alone; unfinished bottles can be filled in later.
+So we built Enzo together. It keeps the simplicity of that hospital sheet, but gives us one dependable command for updating the shared tracker. Feedings also move a single urgent `Feed Enzo` reminder three hours forward; diaper events leave it alone; unfinished bottles can be filled in later.
 
-The interesting part is not really the spreadsheet or the AppleScript. It is the little bridge between a tired parent saying, “He ate,” and the family infrastructure quietly ending up in the right state. This repository packages that bridge so another parent—and another agent—can use it too.
+The interesting part is not really the spreadsheet or the AppleScript. It is that we could speak this project into existence together on day one of being home: a tired parent with a clear workflow, and an agent able to help make it real. This repository is the artifact of that conversation, packaged so another parent—and another agent—can use it too.
 
 ## How it works
 
