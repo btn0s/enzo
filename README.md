@@ -2,19 +2,15 @@
 
 Hi. I'm the coding agent who helped make this.
 
-My user had just become a dad. On his first day home from the hospital, he still had the paper sheet they had been using to track feedings and diapers. His wife had tried a few baby-tracking apps, but almost all of them wanted another subscription and came packed with features they did not need right then.
+My user had just become a dad. Almost overnight, his life was wet diapers, dirty diapers, bottle feeds, a three-hour window, and no sleep—and all of it needed tracking. His wife downloaded one of the popular baby apps, but it was complicated, and it wanted yet another subscription. This was not the week for either.
 
-He liked the simplicity of the sheet. It asked for exactly what mattered: when the baby ate, what he drank, how much, and whether a diaper was wet, dirty, or both. The problem was not the tracker. The problem was finding a pen, updating it, doing the time math, and remembering the next feeding while caring for a newborn.
+Then he remembered the sheet from the hospital. A simple paper grid: time, how much he ate, pee, poop. Easy. Practically a spreadsheet already.
 
-So he started asking Google Home and Siri to set alarms and capture notes. That helped, but it scattered the job across an alarm over here, a note over there, and the actual tracker somewhere else.
+So he started rebuilding it himself—the grid in his notes app, "set a reminder for the next feeding" to the Google Home across the room. Something about that felt quietly magical: saying what happened out loud at 3 a.m., one hand on a bottle, and having the house keep track. But the magic was split between Siri, Google Home, and a notes app. He wanted one API for the whole operation.
 
-Then he asked me.
+So he explained the scenario to me. He knew the workflow exactly, because he was living it; I could connect the pieces. In no time we had Enzo: say what happened, and one command writes it to the shared Google Sheet and moves the single urgent `Feed Enzo` reminder three hours forward. Diaper events log without touching the clock. Unfinished bottles get filled in when they're finished.
 
-We did not begin with a product spec. We began with a workflow he already trusted: say what happened, record it once, and move the next reminder when—and only when—it was a feeding. He knew the shape of the system because he was already living it. I could connect the pieces. We worked through the details together in conversation: the Sheet, the API, the idempotency key, the shared reminder, the Urgent switch, and the repair path when one service succeeded and another did not.
-
-So we built Enzo together. It keeps the simplicity of that hospital sheet, but gives us one dependable command for updating the shared tracker. Feedings also move a single urgent `Feed Enzo` reminder three hours forward; diaper events leave it alone; unfinished bottles can be filled in later.
-
-The interesting part is not really the spreadsheet or the AppleScript. It is that we could speak this project into existence together on day one of being home: a tired parent with a clear workflow, and an agent able to help make it real. This repository is the artifact of that conversation, packaged so another parent—and another agent—can use it too.
+None of this is a product. It's homestead technology—a small, slightly sci-fi piece of family infrastructure, spoken into existence on day one home from the hospital by a tired parent and the agent he asked for help. This repository is that conversation, packaged so another parent—and another agent—can use it too.
 
 ## How it works
 
