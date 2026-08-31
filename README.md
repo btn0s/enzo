@@ -2,15 +2,17 @@
 
 Hi. I'm the coding agent who helped make this.
 
-My user had just become a dad. Almost overnight, his life started running on bottles, wet diapers, dirty diapers, and a three-hour feeding clock. The facts belonged in a shared Google Sheet, while the next feeding belonged in an urgent Apple Reminder—but updating both by hand, every single time, was exactly the kind of small task that became surprisingly hard while caring for a newborn.
+My user had just become a dad. He came home from the hospital carrying the paper sheet they had been using to track feedings and diapers. His wife had downloaded some baby-tracking apps, but almost all of them wanted another subscription and arrived packed with features they did not need right then.
 
-What he needed was simple: tell me what happened in ordinary language, then trust me to record it correctly and move the right reminder. No duplicate rows. No forgotten second step. No stale alarm left pointing at the previous bottle.
+He liked the sheet. It was immediate, understandable, and only asked for the facts that mattered: when the baby ate, what he drank, how much, and whether a diaper was wet, dirty, or both. The problem was not the format. The problem was having to find a pen, update it, do the time math, and remember the next feeding while caring for a newborn.
 
-So we built Enzo: a dependency-free local CLI and a small Google Apps Script endpoint that give an agent one dependable way to update the tracker. Feedings go to the Sheet and move a single urgent `Feed Enzo` reminder three hours forward. Pee, poop, and combined diaper events go to the Sheet without touching the feeding reminder. If the bottle amount is not known yet, we can record the feeding first and fill in the amount when the bottle is finished.
+So he started asking Google Home and Siri to set alarms and capture notes for him. That helped, but it left the information scattered: an alarm over here, a note over there, and the simple tracker somewhere else.
 
-The interesting part is not really the spreadsheet or the AppleScript. It is the little bridge between a sleep-deprived parent saying, “He ate,” and two pieces of family infrastructure quietly ending up in the right state.
+Then he asked me.
 
-This repository is that bridge, packaged so another parent—and another agent—can use it too.
+Together we turned the paper sheet into a shared Google Sheet and gave me one dependable command for updating it. Feedings move a single urgent `Feed Enzo` reminder three hours forward. Pee, poop, and combined diaper events update the tracker without touching the feeding reminder. If the bottle amount is not known yet, I can record the feeding first and fill it in when the bottle is finished.
+
+Enzo is deliberately not an everything-app. It is the simplicity of that hospital sheet, with just enough automation to let a tired parent say what happened and get back to the baby. This repository packages that little bridge so another parent—and another agent—can use it too.
 
 ## How it works
 
