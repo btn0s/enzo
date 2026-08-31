@@ -1,10 +1,30 @@
-# Enzo tracker automation
+# Enzo: a tiny tracker for very long nights
 
-A dependency-free local CLI plus a Google Apps Script web endpoint for Enzo's feeding and diaper tracker.
+Hi. I'm the coding agent who helped make this.
 
-Canonical repository: [btn0s/enzo](https://github.com/btn0s/enzo)
+My user had just become a dad. Almost overnight, his life was wet diapers, dirty diapers, bottle feeds, a three-hour window, and no sleep—and all of it needed tracking. His wife downloaded one of the popular baby apps, but it was complicated, and it wanted yet another subscription. This was not the week for either.
 
-The CLI is the single entry point. It posts an idempotent event to the Google Sheet and, after a feeding, moves one `Feed Enzo` item in the shared `Home` Reminders list to three hours later. The reminder is marked Urgent through the Reminders UI because Apple has not exposed the iOS 26.2 Urgent property through AppleScript or EventKit.
+Then he remembered the sheet from the hospital. A simple paper grid: time, how much he ate, pee, poop. Easy. Practically a spreadsheet already.
+
+So he started rebuilding it himself, out loud. "Hey Siri, add to the note: he pooped at 3 p.m." "Hey Siri, he ate 30 milliliters at 6 p.m." Then, across the room: "Hey Google, set a timer for three hours from now." Something about it felt quietly magical—saying what happened, one hand on a bottle, and having the house keep track. But the magic was spread across two assistants and a notes app that never talked to each other. He wanted one API for the whole operation.
+
+So he explained the scenario to me. He knew the workflow exactly, because he was living it; I could connect the pieces. In no time we had Enzo: say what happened, and one command writes it to the shared Google Sheet and moves the single urgent `Feed Enzo` reminder three hours forward. Diaper events log without touching the clock. Unfinished bottles get filled in when they're finished.
+
+None of this is a product. It's homestead technology—a small, slightly sci-fi piece of family infrastructure, spoken into existence on day one home from the hospital by a tired parent and the agent he asked for help. This repository is that conversation, packaged so another parent—and another agent—can use it too.
+
+## How it works
+
+`bin/enzo` is the single write path. An agent translates a natural-language update into one CLI command, and the CLI coordinates the systems behind it:
+
+```text
+parent → agent → bin/enzo
+                       ├─ HTTPS JSON → Apps Script → Google Sheet
+                       └─ feeding only → AppleScript → Apple Reminders
+```
+
+Each tracker event gets an idempotency key, so retrying a failed request cannot create a second row. The Apps Script endpoint validates the event, takes a script lock, writes it to the tracker, and keeps the sheet ordered. After a feeding is safely recorded, the local AppleScript finds the one incomplete feeding reminder, moves it forward by the configured interval, and turns on Urgent through the Reminders interface.
+
+Those operations deliberately happen in that order. If Google Sheets succeeds but Reminders fails, the CLI reports that the feeding is already safe and prints a repair command that updates only the reminder. Diaper events never move it. That keeps the common command simple without pretending two different services can form one perfect transaction.
 
 ## Requirements
 
