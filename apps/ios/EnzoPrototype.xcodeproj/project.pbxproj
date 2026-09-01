@@ -1,0 +1,623 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0C26F95A0073F7F16D0664DD /* VoiceInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEB3651087D7DEE829A33B2A /* VoiceInput.swift */; };
+		2E699701855F41E072C885D6 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C725851A0AAD78657BE9CC /* APIClient.swift */; };
+		3C84FC3FC98D80AF6BFCE611 /* ActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003FBBFE605F96C77F183146 /* ActivityService.swift */; };
+		536DBB9DC9339D5D1EE22812 /* AlarmReconciliationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CB3464049165C3CEF2FE893 /* AlarmReconciliationPolicyTests.swift */; };
+		69D0FB48C0312DFB8484E36D /* AlarmReconciliationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 658791B3A533E9E7F53B9DD0 /* AlarmReconciliationPolicy.swift */; };
+		6AB864C85533946721D51714 /* EnzoLiveActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2319649500C3DE8D6F41649 /* EnzoLiveActivityBundle.swift */; };
+		93522CC73569F41CAEDFCD90 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB4A47335A74F68062554F90 /* Models.swift */; };
+		94A605C5F6A020974F034E7B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5728876A6A1D4311ABA3AE /* ContentView.swift */; };
+		9DE61F6320F808717320A826 /* LiveActivityReconciliationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 344440705FA51B09CAB776A1 /* LiveActivityReconciliationPolicy.swift */; };
+		AF66371B62CDB1EA283CC585 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 084F5D344F5145DDC217A0FE /* AppModel.swift */; };
+		B3FDFBC53ACB0EE7999CFD52 /* FeedActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6632FF24E498D1DCBBC3D6 /* FeedActivityAttributes.swift */; };
+		B7955FD7B1704B456E794590 /* FeedLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E81852D6032E666B9F5FBE9 /* FeedLiveActivity.swift */; };
+		BC4D744E39212B15F9DCF1EC /* FeedActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6632FF24E498D1DCBBC3D6 /* FeedActivityAttributes.swift */; };
+		BC70FC6B7BF72536EE82C2CB /* DailyInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CAD0B4790022A9058C69E15 /* DailyInsights.swift */; };
+		C23E237D68CEDFE97E985D3B /* AlarmService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B61593BCAD91AB858B98C3 /* AlarmService.swift */; };
+		C2B30C36C42F9136675EE003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9F3952F9D80AD3C2974B203B /* Assets.xcassets */; };
+		D05AEF6DC6D3D57A6AAA9FD3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39341FC934A61DD7BF70E0CD /* Assets.xcassets */; };
+		E78BADE5A235DD12A379B594 /* EditorViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 184DE56E7A58FFE522398303 /* EditorViews.swift */; };
+		E8BD00067CB6500092BE0BC0 /* CommandParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97040DF03B47FC6849F8EB13 /* CommandParser.swift */; };
+		E8FFE3D883CA7A8BC17B2F51 /* EnzoPrototypeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF83C8401CF13E2951424695 /* EnzoPrototypeApp.swift */; };
+		E9435867E07914B255B954D5 /* EnzoLiveActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A25C07BFF3DD4858F4651AB3 /* EnzoLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EA43428CE3DD9E96E5A74321 /* LiveActivityReconciliationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E295D7571127A13C2C55A383 /* LiveActivityReconciliationPolicyTests.swift */; };
+		FBC13E892F8887B96C7903F0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39341FC934A61DD7BF70E0CD /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		643D80E60B3B1FA11B9C7D92 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D1290C2E64D734E8EFC4BC75 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 21D7218E6FA7C83656187913;
+			remoteInfo = EnzoLiveActivity;
+		};
+		FE649EF11F9EB8FBA67AF5C9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D1290C2E64D734E8EFC4BC75 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3ACF3BECB6CDB21E3426C8AD;
+			remoteInfo = EnzoPrototype;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A653EAE633240AE7980A6D40 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				E9435867E07914B255B954D5 /* EnzoLiveActivity.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		003FBBFE605F96C77F183146 /* ActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityService.swift; sourceTree = "<group>"; };
+		084F5D344F5145DDC217A0FE /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		0F335E0CE5114434245FDE8C /* EnzoPrototype.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = EnzoPrototype.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		15B61593BCAD91AB858B98C3 /* AlarmService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmService.swift; sourceTree = "<group>"; };
+		184DE56E7A58FFE522398303 /* EditorViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViews.swift; sourceTree = "<group>"; };
+		1CBA813AEAFB10F73EB43516 /* EnzoPrototypeTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = EnzoPrototypeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2CAD0B4790022A9058C69E15 /* DailyInsights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyInsights.swift; sourceTree = "<group>"; };
+		2D4D9F3F4EBED43002B6FFED /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		344440705FA51B09CAB776A1 /* LiveActivityReconciliationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityReconciliationPolicy.swift; sourceTree = "<group>"; };
+		39341FC934A61DD7BF70E0CD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4BF4C58BA3AEEECB44542933 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		658791B3A533E9E7F53B9DD0 /* AlarmReconciliationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmReconciliationPolicy.swift; sourceTree = "<group>"; };
+		6B5728876A6A1D4311ABA3AE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		8CB3464049165C3CEF2FE893 /* AlarmReconciliationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmReconciliationPolicyTests.swift; sourceTree = "<group>"; };
+		8E81852D6032E666B9F5FBE9 /* FeedLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedLiveActivity.swift; sourceTree = "<group>"; };
+		97040DF03B47FC6849F8EB13 /* CommandParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandParser.swift; sourceTree = "<group>"; };
+		9F3952F9D80AD3C2974B203B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A25C07BFF3DD4858F4651AB3 /* EnzoLiveActivity.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = EnzoLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		AF83C8401CF13E2951424695 /* EnzoPrototypeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnzoPrototypeApp.swift; sourceTree = "<group>"; };
+		B2319649500C3DE8D6F41649 /* EnzoLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnzoLiveActivityBundle.swift; sourceTree = "<group>"; };
+		BEB3651087D7DEE829A33B2A /* VoiceInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceInput.swift; sourceTree = "<group>"; };
+		E295D7571127A13C2C55A383 /* LiveActivityReconciliationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityReconciliationPolicyTests.swift; sourceTree = "<group>"; };
+		E4C725851A0AAD78657BE9CC /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		EA6632FF24E498D1DCBBC3D6 /* FeedActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedActivityAttributes.swift; sourceTree = "<group>"; };
+		FB4A47335A74F68062554F90 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		3E2DEE87FAF37BCB9327CB91 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				003FBBFE605F96C77F183146 /* ActivityService.swift */,
+				658791B3A533E9E7F53B9DD0 /* AlarmReconciliationPolicy.swift */,
+				15B61593BCAD91AB858B98C3 /* AlarmService.swift */,
+				E4C725851A0AAD78657BE9CC /* APIClient.swift */,
+				084F5D344F5145DDC217A0FE /* AppModel.swift */,
+				9F3952F9D80AD3C2974B203B /* Assets.xcassets */,
+				97040DF03B47FC6849F8EB13 /* CommandParser.swift */,
+				6B5728876A6A1D4311ABA3AE /* ContentView.swift */,
+				2CAD0B4790022A9058C69E15 /* DailyInsights.swift */,
+				184DE56E7A58FFE522398303 /* EditorViews.swift */,
+				AF83C8401CF13E2951424695 /* EnzoPrototypeApp.swift */,
+				4BF4C58BA3AEEECB44542933 /* Info.plist */,
+				344440705FA51B09CAB776A1 /* LiveActivityReconciliationPolicy.swift */,
+				FB4A47335A74F68062554F90 /* Models.swift */,
+				BEB3651087D7DEE829A33B2A /* VoiceInput.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		63D5AEA9B98684FA29CC5FA2 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A25C07BFF3DD4858F4651AB3 /* EnzoLiveActivity.appex */,
+				0F335E0CE5114434245FDE8C /* EnzoPrototype.app */,
+				1CBA813AEAFB10F73EB43516 /* EnzoPrototypeTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AE892DEEE0F890DD7846728F /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				39341FC934A61DD7BF70E0CD /* Assets.xcassets */,
+				EA6632FF24E498D1DCBBC3D6 /* FeedActivityAttributes.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		B7C3FC27B09AF46404946D70 = {
+			isa = PBXGroup;
+			children = (
+				3E2DEE87FAF37BCB9327CB91 /* App */,
+				CA65685E6B3088C371D9538E /* LiveActivity */,
+				AE892DEEE0F890DD7846728F /* Shared */,
+				F1D70725C46F1D3E994B3AC8 /* Tests */,
+				63D5AEA9B98684FA29CC5FA2 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		CA65685E6B3088C371D9538E /* LiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				B2319649500C3DE8D6F41649 /* EnzoLiveActivityBundle.swift */,
+				8E81852D6032E666B9F5FBE9 /* FeedLiveActivity.swift */,
+				2D4D9F3F4EBED43002B6FFED /* Info.plist */,
+			);
+			path = LiveActivity;
+			sourceTree = "<group>";
+		};
+		F1D70725C46F1D3E994B3AC8 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				8CB3464049165C3CEF2FE893 /* AlarmReconciliationPolicyTests.swift */,
+				E295D7571127A13C2C55A383 /* LiveActivityReconciliationPolicyTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		21D7218E6FA7C83656187913 /* EnzoLiveActivity */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8DDF9E085D123DF4E024D3A2 /* Build configuration list for PBXNativeTarget "EnzoLiveActivity" */;
+			buildPhases = (
+				0645806DD15E837EEF9DAD8A /* Sources */,
+				00C19A7A1D70D311A2B251CB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = EnzoLiveActivity;
+			packageProductDependencies = (
+			);
+			productName = EnzoLiveActivity;
+			productReference = A25C07BFF3DD4858F4651AB3 /* EnzoLiveActivity.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		3ACF3BECB6CDB21E3426C8AD /* EnzoPrototype */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CE135E0BC60C13F84DD346BA /* Build configuration list for PBXNativeTarget "EnzoPrototype" */;
+			buildPhases = (
+				630C428EE8A6031FC1E1D73C /* Sources */,
+				2A972F099210E154F2C1A5EA /* Resources */,
+				A653EAE633240AE7980A6D40 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				044F94F46C7A788D808370DE /* PBXTargetDependency */,
+			);
+			name = EnzoPrototype;
+			packageProductDependencies = (
+			);
+			productName = EnzoPrototype;
+			productReference = 0F335E0CE5114434245FDE8C /* EnzoPrototype.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AA25C1668AE580DF448FD7AC /* EnzoPrototypeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6459090A8F17CE5DC82802D1 /* Build configuration list for PBXNativeTarget "EnzoPrototypeTests" */;
+			buildPhases = (
+				3E4F61ED584BEB12B193CEFC /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				86A5C401E29C7D213BC3EAB3 /* PBXTargetDependency */,
+			);
+			name = EnzoPrototypeTests;
+			packageProductDependencies = (
+			);
+			productName = EnzoPrototypeTests;
+			productReference = 1CBA813AEAFB10F73EB43516 /* EnzoPrototypeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D1290C2E64D734E8EFC4BC75 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					21D7218E6FA7C83656187913 = {
+						DevelopmentTeam = 3B468RG7H6;
+						ProvisioningStyle = Automatic;
+					};
+					3ACF3BECB6CDB21E3426C8AD = {
+						DevelopmentTeam = 3B468RG7H6;
+						ProvisioningStyle = Automatic;
+					};
+					AA25C1668AE580DF448FD7AC = {
+						DevelopmentTeam = 3B468RG7H6;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 2D3580D6E21A27BA343D89D6 /* Build configuration list for PBXProject "EnzoPrototype" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = B7C3FC27B09AF46404946D70;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 63D5AEA9B98684FA29CC5FA2 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				21D7218E6FA7C83656187913 /* EnzoLiveActivity */,
+				3ACF3BECB6CDB21E3426C8AD /* EnzoPrototype */,
+				AA25C1668AE580DF448FD7AC /* EnzoPrototypeTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		00C19A7A1D70D311A2B251CB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D05AEF6DC6D3D57A6AAA9FD3 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2A972F099210E154F2C1A5EA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C2B30C36C42F9136675EE003 /* Assets.xcassets in Resources */,
+				FBC13E892F8887B96C7903F0 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0645806DD15E837EEF9DAD8A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6AB864C85533946721D51714 /* EnzoLiveActivityBundle.swift in Sources */,
+				B3FDFBC53ACB0EE7999CFD52 /* FeedActivityAttributes.swift in Sources */,
+				B7955FD7B1704B456E794590 /* FeedLiveActivity.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3E4F61ED584BEB12B193CEFC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				536DBB9DC9339D5D1EE22812 /* AlarmReconciliationPolicyTests.swift in Sources */,
+				EA43428CE3DD9E96E5A74321 /* LiveActivityReconciliationPolicyTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		630C428EE8A6031FC1E1D73C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2E699701855F41E072C885D6 /* APIClient.swift in Sources */,
+				3C84FC3FC98D80AF6BFCE611 /* ActivityService.swift in Sources */,
+				69D0FB48C0312DFB8484E36D /* AlarmReconciliationPolicy.swift in Sources */,
+				C23E237D68CEDFE97E985D3B /* AlarmService.swift in Sources */,
+				AF66371B62CDB1EA283CC585 /* AppModel.swift in Sources */,
+				E8BD00067CB6500092BE0BC0 /* CommandParser.swift in Sources */,
+				94A605C5F6A020974F034E7B /* ContentView.swift in Sources */,
+				BC70FC6B7BF72536EE82C2CB /* DailyInsights.swift in Sources */,
+				E78BADE5A235DD12A379B594 /* EditorViews.swift in Sources */,
+				E8FFE3D883CA7A8BC17B2F51 /* EnzoPrototypeApp.swift in Sources */,
+				BC4D744E39212B15F9DCF1EC /* FeedActivityAttributes.swift in Sources */,
+				9DE61F6320F808717320A826 /* LiveActivityReconciliationPolicy.swift in Sources */,
+				93522CC73569F41CAEDFCD90 /* Models.swift in Sources */,
+				0C26F95A0073F7F16D0664DD /* VoiceInput.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		044F94F46C7A788D808370DE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 21D7218E6FA7C83656187913 /* EnzoLiveActivity */;
+			targetProxy = 643D80E60B3B1FA11B9C7D92 /* PBXContainerItemProxy */;
+		};
+		86A5C401E29C7D213BC3EAB3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3ACF3BECB6CDB21E3426C8AD /* EnzoPrototype */;
+			targetProxy = FE649EF11F9EB8FBA67AF5C9 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		27B6101B8BAF57439F54A9AD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.btn0s.enzo.prototype.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Enzo.app/Enzo";
+			};
+			name = Debug;
+		};
+		3F417A2796A26CE029918BB0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGNING_ALLOWED = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LiveActivity/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.btn0s.enzo.prototype.live-activity";
+				PRODUCT_NAME = EnzoLiveActivity;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3F4392B3B5E95499A7E29DF7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.btn0s.enzo.prototype.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Enzo.app/Enzo";
+			};
+			name = Release;
+		};
+		64828BCED3A1EDE22B5114A2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGNING_ALLOWED = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LiveActivity/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.btn0s.enzo.prototype.live-activity";
+				PRODUCT_NAME = EnzoLiveActivity;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7A804D0FD6F0954DE861028C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 3B468RG7H6;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		B90F327D311896D83BE56E93 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 3B468RG7H6;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		D3782A4049A42654B0C10E90 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.btn0s.enzo.prototype;
+				PRODUCT_NAME = Enzo;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FBEB6A679F300391DA73E61D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.btn0s.enzo.prototype;
+				PRODUCT_NAME = Enzo;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2D3580D6E21A27BA343D89D6 /* Build configuration list for PBXProject "EnzoPrototype" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B90F327D311896D83BE56E93 /* Debug */,
+				7A804D0FD6F0954DE861028C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6459090A8F17CE5DC82802D1 /* Build configuration list for PBXNativeTarget "EnzoPrototypeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				27B6101B8BAF57439F54A9AD /* Debug */,
+				3F4392B3B5E95499A7E29DF7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8DDF9E085D123DF4E024D3A2 /* Build configuration list for PBXNativeTarget "EnzoLiveActivity" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3F417A2796A26CE029918BB0 /* Debug */,
+				64828BCED3A1EDE22B5114A2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CE135E0BC60C13F84DD346BA /* Build configuration list for PBXNativeTarget "EnzoPrototype" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D3782A4049A42654B0C10E90 /* Debug */,
+				FBEB6A679F300391DA73E61D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D1290C2E64D734E8EFC4BC75 /* Project object */;
+}

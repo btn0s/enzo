@@ -1,0 +1,90 @@
+name: EnzoPrototype
+options:
+  bundleIdPrefix: com.btn0s.enzo
+  deploymentTarget:
+    iOS: "26.1"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "26.1"
+    DEVELOPMENT_TEAM: 3B468RG7H6
+    CODE_SIGN_STYLE: Automatic
+targets:
+  EnzoPrototype:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+      - path: Shared
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - enzo
+        NSMicrophoneUsageDescription: Hold the talk button to dictate a feed or diaper event.
+        NSSpeechRecognitionUsageDescription: Turn short care commands into editable Enzo tracker events.
+        ITSAppUsesNonExemptEncryption: false
+        NSSupportsLiveActivities: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UILaunchScreen: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.btn0s.enzo.prototype
+        PRODUCT_NAME: Enzo
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGNING_ALLOWED: true
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - target: EnzoLiveActivity
+        embed: true
+  EnzoLiveActivity:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: LiveActivity
+      - path: Shared
+    info:
+      path: LiveActivity/Info.plist
+      properties:
+        CFBundleDisplayName: Enzo
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.btn0s.enzo.prototype.live-activity
+        PRODUCT_NAME: EnzoLiveActivity
+        GENERATE_INFOPLIST_FILE: false
+        APPLICATION_EXTENSION_API_ONLY: true
+        CODE_SIGNING_ALLOWED: true
+  EnzoPrototypeTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: EnzoPrototype
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.btn0s.enzo.prototype.tests
+        GENERATE_INFOPLIST_FILE: true
+        CODE_SIGNING_ALLOWED: false
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Enzo.app/Enzo"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  EnzoPrototype:
+    build:
+      targets:
+        EnzoPrototype: all
+        EnzoLiveActivity: all
+    run:
+      config: Debug
+    test:
+      environmentVariables:
+        ENZO_UNIT_TESTING: "1"
+      targets:
+        - EnzoPrototypeTests

@@ -1,5 +1,8 @@
 .DS_Store
+.tmp/
 .env
+apps/ios/.derived-data/
+apps/ios/.device-derived-data/
 .env.*
 !.env.example
 __pycache__/
@@ -10,3 +13,4 @@ __pycache__/
 htmlcov/
 .idea/
 .vscode/
+apps/server/.data/

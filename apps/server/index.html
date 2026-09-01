@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4efe7">
+  <title>Enzo — Local prototype</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f4efe7;
+      --card: rgba(255,255,255,.76);
+      --ink: #20221f;
+      --muted: #6d706a;
+      --line: rgba(32,34,31,.12);
+      --green: #315b4a;
+      --green-soft: #dce9e1;
+      --orange: #b45b2a;
+      --shadow: 0 20px 55px rgba(43,35,27,.09);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% -10%, #fff 0 16rem, transparent 34rem),
+        linear-gradient(145deg, #f7f3ed, var(--paper));
+    }
+    button, input, select, textarea { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    main { width: min(100%, 760px); margin: 0 auto; padding: max(24px, env(safe-area-inset-top)) 18px 72px; }
+    header { display: flex; align-items: center; justify-content: space-between; margin: 4px 2px 22px; }
+    h1 { margin: 0; font-size: clamp(30px, 7vw, 46px); letter-spacing: -.045em; }
+    h1 span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+    .status { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
+    .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #65a67f; box-shadow: 0 0 0 4px #dce9e1; }
+    .card { background: var(--card); border: 1px solid rgba(255,255,255,.9); border-radius: 24px; box-shadow: var(--shadow); backdrop-filter: blur(18px); }
+    .hero { padding: 24px; background: var(--green); color: white; overflow: hidden; position: relative; }
+    .hero::after { content: ""; position: absolute; width: 220px; height: 220px; border-radius: 50%; right: -80px; top: -110px; background: rgba(255,255,255,.06); }
+    .eyebrow { margin: 0 0 8px; font-size: 12px; opacity: .72; text-transform: uppercase; letter-spacing: .1em; }
+    .countdown { margin: 0; font-size: clamp(42px, 12vw, 72px); line-height: .95; letter-spacing: -.06em; font-variant-numeric: tabular-nums; }
+    .due { margin: 12px 0 0; color: rgba(255,255,255,.72); font-size: 14px; }
+    .actions { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+    .action { min-height: 66px; border: 0; border-radius: 19px; background: white; color: var(--ink); font-weight: 750; cursor: pointer; box-shadow: 0 8px 20px rgba(43,35,27,.06); }
+    .action:active { transform: translateY(1px) scale(.99); }
+    .action.primary { background: #e8b469; color: #2b2113; }
+    .action small { display: block; margin-top: 3px; color: var(--muted); font-weight: 500; font-size: 11px; }
+    .section-title { display: flex; align-items: end; justify-content: space-between; margin: 28px 3px 10px; }
+    .section-title h2 { margin: 0; font-size: 18px; letter-spacing: -.025em; }
+    .section-title span { color: var(--muted); font-size: 12px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .stat { padding: 17px 14px; }
+    .stat strong { display: block; font-size: 28px; letter-spacing: -.045em; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    .timeline { overflow: hidden; }
+    .empty { padding: 36px 20px; text-align: center; color: var(--muted); }
+    .event { display: grid; grid-template-columns: 46px 1fr auto; gap: 12px; align-items: center; padding: 15px 17px; border-bottom: 1px solid var(--line); }
+    .event:last-child { border-bottom: 0; }
+    .icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 15px; background: var(--green-soft); font-size: 20px; }
+    .event h3 { margin: 0; font-size: 15px; }
+    .event p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .event-actions { display: flex; align-items: center; gap: 8px; }
+    .delete { border: 0; background: transparent; color: #989b96; font-size: 20px; cursor: pointer; padding: 8px; }
+    dialog { width: min(calc(100% - 28px), 440px); border: 0; padding: 0; border-radius: 26px; box-shadow: 0 30px 90px rgba(0,0,0,.28); background: #fbf8f3; }
+    dialog::backdrop { background: rgba(24,26,23,.46); backdrop-filter: blur(5px); }
+    form { padding: 24px; }
+    form h2 { margin: 0 0 20px; font-size: 25px; }
+    label { display: block; color: var(--muted); font-size: 12px; margin: 15px 0 6px; }
+    input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 14px; background: white; padding: 13px 14px; color: var(--ink); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .check { display: flex; align-items: center; gap: 10px; margin: 16px 0; color: var(--ink); font-size: 14px; }
+    .check input { width: 19px; height: 19px; }
+    .form-actions { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; margin-top: 18px; }
+    .form-actions button { min-height: 50px; border: 0; border-radius: 15px; font-weight: 700; cursor: pointer; }
+    .cancel { background: #e9e5de; }
+    .save { background: var(--green); color: white; }
+    details { margin-top: 24px; color: var(--muted); font-size: 12px; }
+    pre { overflow: auto; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.54); font-size: 10px; }
+    .toast { position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); transform: translate(-50%, 120px); opacity: 0; padding: 12px 18px; border-radius: 999px; background: #20221f; color: white; font-size: 13px; transition: .25s ease; z-index: 10; }
+    .toast.show { transform: translate(-50%, 0); opacity: 1; }
+    @media (max-width: 520px) {
+      .actions { grid-template-columns: repeat(3, 1fr); }
+      .action.primary { grid-column: 1 / -1; }
+      .event { grid-template-columns: 42px 1fr auto; padding-inline: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Enzo <span>local prototype</span></h1>
+      <div class="status" id="connection">Local</div>
+    </header>
+
+    <section class="card hero">
+      <p class="eyebrow">Next feed</p>
+      <p class="countdown" id="countdown">—</p>
+      <p class="due" id="due">Log the first feeding to start the clock.</p>
+    </section>
+
+    <section class="actions" aria-label="Quick log">
+      <button class="action primary" id="open-feed">＋ Feed <small>amount + milk</small></button>
+      <button class="action" data-diaper="pee">Pee</button>
+      <button class="action" data-diaper="poop">Poop</button>
+      <button class="action" data-diaper="both">Both</button>
+    </section>
+
+    <div class="section-title"><h2>Today</h2><span id="day-label"></span></div>
+    <section class="stats">
+      <div class="card stat"><strong id="milk">0</strong><span>mL milk</span></div>
+      <div class="card stat"><strong id="pees">0</strong><span>wet</span></div>
+      <div class="card stat"><strong id="poops">0</strong><span>dirty</span></div>
+    </section>
+
+    <div class="section-title"><h2>Recent events</h2><span id="storage-label"></span></div>
+    <section class="card timeline" id="timeline"><div class="empty">Nothing logged yet.</div></section>
+
+    <details>
+      <summary>Prototype state</summary>
+      <pre id="debug">Loading…</pre>
+    </details>
+  </main>
+
+  <dialog id="feed-dialog">
+    <form id="feed-form">
+      <h2>Log a feeding</h2>
+      <div class="row">
+        <div>
+          <label for="amount">Amount (mL)</label>
+          <input id="amount" name="amount" type="number" inputmode="decimal" min="1" max="1000" placeholder="Unknown">
+        </div>
+        <div>
+          <label for="milk-type">Milk</label>
+          <select id="milk-type" name="milkType">
+            <option value="formula">Formula</option>
+            <option value="breast-milk">Breast milk</option>
+          </select>
+        </div>
+      </div>
+      <label for="occurred-at">When</label>
+      <input id="occurred-at" name="occurredAt" type="datetime-local" required>
+      <label for="notes">Notes</label>
+      <textarea id="notes" name="notes" rows="2" placeholder="Optional"></textarea>
+      <label class="check"><input id="resets-timer" type="checkbox" checked> Reset the three-hour clock</label>
+      <div class="form-actions">
+        <button class="cancel" value="cancel" type="button">Cancel</button>
+        <button class="save" type="submit">Save feeding</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script type="module">
+    const $ = (selector) => document.querySelector(selector);
+    let state = null;
+    const dateTime = new Intl.DateTimeFormat([], { hour: "numeric", minute: "2-digit" });
+    const dateOnly = new Intl.DateTimeFormat([], { weekday: "short", month: "short", day: "numeric" });
+
+    function inputNow() {
+      const now = new Date(Date.now() - new Date().getTimezoneOffset() * 60_000);
+      return now.toISOString().slice(0, 16);
+    }
+
+    function toast(message) {
+      const element = $("#toast");
+      element.textContent = message;
+      element.classList.add("show");
+      setTimeout(() => element.classList.remove("show"), 1800);
+    }
+
+    async function api(path, options) {
+      const response = await fetch(path, {
+        ...options,
+        headers: { "content-type": "application/json", ...(options?.headers ?? {}) },
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? "Request failed");
+      return body;
+    }
+
+    async function load() {
+      try {
+        state = await api("/api/state");
+        $("#connection").textContent = "Local · Postgres";
+        render();
+      } catch (error) {
+        $("#connection").textContent = "Offline";
+        toast(error.message);
+      }
+    }
+
+    function eventTitle(event) {
+      if (event.type === "feed") {
+        const amount = event.feed.amountMl === null ? "Unknown amount" : `${event.feed.amountMl} mL`;
+        const milk = event.feed.milkType === "breast-milk" ? "breast milk" : "formula";
+        return `${amount} ${milk}`;
+      }
+      if (event.diaper.pee && event.diaper.poop) return "Pee + poop";
+      return event.diaper.pee ? "Pee" : "Poop";
+    }
+
+    function eventIcon(event) {
+      if (event.type === "feed") return "◒";
+      if (event.diaper.pee && event.diaper.poop) return "◐";
+      return event.diaper.pee ? "◡" : "●";
+    }
+
+    function render() {
+      if (!state) return;
+      $("#milk").textContent = Math.round(state.today.milkMl);
+      $("#pees").textContent = state.today.pees;
+      $("#poops").textContent = state.today.poops;
+      $("#day-label").textContent = dateOnly.format(new Date());
+      $("#storage-label").textContent = "Postgres · local";
+      $("#debug").textContent = JSON.stringify(state, null, 2);
+
+      const timeline = $("#timeline");
+      if (!state.events.length) {
+        timeline.innerHTML = '<div class="empty">Nothing logged yet.</div>';
+      } else {
+        timeline.innerHTML = state.events.slice(0, 30).map((event) => `
+          <article class="event">
+            <div class="icon">${eventIcon(event)}</div>
+            <div>
+              <h3>${eventTitle(event)}</h3>
+              <p>${dateOnly.format(new Date(event.occurredAt))} · ${dateTime.format(new Date(event.occurredAt))}${event.type === "feed" && !event.feed.resetsTimer ? " · top-off" : ""}</p>
+            </div>
+            <div class="event-actions">
+              <button class="delete" data-delete="${event.id}" aria-label="Delete event">×</button>
+            </div>
+          </article>
+        `).join("");
+      }
+      updateCountdown();
+    }
+
+    function updateCountdown() {
+      if (!state?.nextFeedAt) return;
+      const remaining = new Date(state.nextFeedAt).getTime() - Date.now();
+      const overdue = remaining < 0;
+      const absolute = Math.abs(remaining);
+      const hours = Math.floor(absolute / 3_600_000);
+      const minutes = Math.floor((absolute % 3_600_000) / 60_000);
+      $("#countdown").textContent = `${overdue ? "+" : ""}${hours}:${String(minutes).padStart(2, "0")}`;
+      $("#due").textContent = `${overdue ? "Due" : "Due at"} ${dateTime.format(new Date(state.nextFeedAt))}${overdue ? " ago" : ""}`;
+    }
+
+    async function logDiaper(kind) {
+      try {
+        const body = await api("/api/events", {
+          method: "POST",
+          body: JSON.stringify({
+            type: "diaper",
+            diaper: { pee: kind !== "poop", poop: kind !== "pee" },
+          }),
+        });
+        state = body.state;
+        render();
+        toast(kind === "both" ? "Pee + poop logged" : `${kind[0].toUpperCase()}${kind.slice(1)} logged`);
+        setTimeout(load, 1000);
+      } catch (error) { toast(error.message); }
+    }
+
+    $("#open-feed").addEventListener("click", () => {
+      $("#occurred-at").value = inputNow();
+      $("#feed-dialog").showModal();
+      $("#amount").focus();
+    });
+    $(".cancel").addEventListener("click", () => $("#feed-dialog").close());
+    document.querySelectorAll("[data-diaper]").forEach((button) => {
+      button.addEventListener("click", () => logDiaper(button.dataset.diaper));
+    });
+    $("#feed-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        const body = await api("/api/events", {
+          method: "POST",
+          body: JSON.stringify({
+            type: "feed",
+            feed: {
+              milkType: $("#milk-type").value,
+              amountMl: $("#amount").value || null,
+              resetsTimer: $("#resets-timer").checked,
+            },
+            occurredAt: new Date($("#occurred-at").value).toISOString(),
+            notes: $("#notes").value,
+          }),
+        });
+        state = body.state;
+        render();
+        $("#feed-dialog").close();
+        $("#feed-form").reset();
+        $("#resets-timer").checked = true;
+        toast("Feeding logged");
+        setTimeout(load, 1000);
+      } catch (error) { toast(error.message); }
+    });
+    $("#timeline").addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-delete]");
+      if (!button || !confirm("Remove this event from the prototype?")) return;
+      try {
+        const body = await api(`/api/events/${encodeURIComponent(button.dataset.delete)}`, { method: "DELETE" });
+        state = body.state;
+        render();
+        toast("Event removed");
+      } catch (error) { toast(error.message); }
+    });
+
+    setInterval(updateCountdown, 1000);
+    load();
+  </script>
+</body>
+</html>

@@ -16,6 +16,8 @@ function doPost(e) {
     const request = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     requireToken_(request.token);
     if (request.action === 'log') return json_(logEvent_(request));
+    if (request.action === 'upsert_event') return json_(upsertEvent_(request));
+    if (request.action === 'delete_event') return json_(deleteEvent_(request));
     if (request.action === 'update_feed') return json_(updateLatestFeed_(request));
     if (request.action === 'status') return json_({ok: true, status: status_()});
     throw new Error('Unknown action');
@@ -91,6 +93,74 @@ function logEvent_(request) {
     return {ok: true, duplicate: false, id: request.id};
   } finally {
     lock.releaseLock();
+  }
+}
+
+function upsertEvent_(request) {
+  validate_(request);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = tracker_();
+    const existingRow = findEventRow_(sheet, request.id);
+    const row = existingRow || sheet.getLastRow() + 1;
+    sheet.getRange(row, 1, 1, EVENT_ID_COLUMN).setValues([eventValues_(request)]);
+    formatAndSort_(sheet);
+    SpreadsheetApp.flush();
+    return {ok: true, created: !existingRow, row, id: request.id};
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function deleteEvent_(request) {
+  if (!request.id || typeof request.id !== 'string') throw new Error('id is required');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = tracker_();
+    const row = findEventRow_(sheet, request.id);
+    if (!row) return {ok: true, deleted: false, id: request.id};
+    sheet.deleteRow(row);
+    SpreadsheetApp.flush();
+    return {ok: true, deleted: true, id: request.id};
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function findEventRow_(sheet, eventId) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+  const ids = sheet.getRange(2, EVENT_ID_COLUMN, lastRow - 1, 1).getDisplayValues().flat();
+  const index = ids.indexOf(eventId);
+  return index < 0 ? null : index + 2;
+}
+
+function eventValues_(request) {
+  const occurredAt = new Date(request.occurred_at);
+  return [
+    occurredAt,
+    occurredAt,
+    request.event,
+    request.milk_type || '',
+    request.amount_ml === null || request.amount_ml === '' ? '' : Number(request.amount_ml),
+    request.details || '',
+    request.notes || '',
+    request.id,
+  ];
+}
+
+function formatAndSort_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+  sheet.getRange(2, 1, lastRow - 1, 1).setNumberFormat('mmm d, yyyy');
+  sheet.getRange(2, 2, lastRow - 1, 1).setNumberFormat('h:mm AM/PM');
+  if (lastRow > 2) {
+    sheet.getRange(2, 1, lastRow - 1, EVENT_ID_COLUMN).sort([
+      {column: 1, ascending: true},
+      {column: 2, ascending: true},
+    ]);
   }
 }
 
