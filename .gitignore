@@ -16,3 +16,4 @@ htmlcov/
 apps/server/.data/
 
 apps/ios/App/Secrets.swift
+.wrangler/
