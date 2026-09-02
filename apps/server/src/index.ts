@@ -1,3 +1,7 @@
+import { shouldDisablePushToken } from "./apns";
+import { liveActivityPayload } from "./live-activity-push";
+import { widgetPushPayload } from "./widget-push";
+
 /**
  * Enzo API on Cloudflare Workers. D1 is the durable source of truth.
  * Every /api/* route requires a bearer token (ENZO_API_TOKEN secret).
@@ -33,6 +37,18 @@ type PushDeviceRow = {
   token: string;
   environment: PushEnvironment;
 };
+
+type LiveActivityTokenRow = {
+  token: string;
+  activity_id: string;
+  event_id: string;
+  environment: PushEnvironment;
+};
+type WidgetPushTokenRow = {
+  token: string;
+  environment: PushEnvironment;
+};
+
 
 
 type CheckupRow = {
@@ -329,6 +345,7 @@ async function providerToken(env: Env) {
   return value;
 }
 
+
 async function disablePushDevice(env: Env, token: string) {
   await env.DB.prepare(
     `UPDATE push_devices
@@ -337,6 +354,118 @@ async function disablePushDevice(env: Env, token: string) {
      WHERE token = ?1`,
   ).bind(token).run();
 }
+
+async function disableLiveActivityToken(env: Env, token: string) {
+  await env.DB.prepare(
+    `UPDATE live_activity_tokens
+     SET disabled_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+     WHERE token = ?1`,
+  ).bind(token).run();
+}
+async function disableWidgetPushToken(env: Env, token: string) {
+  await env.DB.prepare(
+    `UPDATE widget_push_tokens
+     SET disabled_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+     WHERE token = ?1`,
+  ).bind(token).run();
+}
+
+async function nextLiveActivityTimestamp(env: Env) {
+  const row = await env.DB.prepare(
+    `INSERT INTO push_delivery_state (id, live_activity_timestamp)
+     VALUES (1, unixepoch())
+     ON CONFLICT (id) DO UPDATE SET
+       live_activity_timestamp = MAX(
+         push_delivery_state.live_activity_timestamp + 1,
+         unixepoch()
+       )
+     RETURNING live_activity_timestamp`,
+  ).first<{ live_activity_timestamp: number }>();
+  if (!row) throw new Error("Unable to allocate a Live Activity timestamp");
+  return row.live_activity_timestamp;
+}
+
+
+
+async function sendLiveActivityNotification(
+  env: Env,
+  authorization: string,
+  activity: LiveActivityTokenRow,
+  nextFeedAt: string | null,
+  timestamp: number,
+) {
+  const host = activity.environment === "sandbox"
+    ? "https://api.sandbox.push.apple.com"
+    : "https://api.push.apple.com";
+  const response = await fetch(`${host}/3/device/${activity.token}`, {
+    method: "POST",
+    headers: {
+      authorization: `bearer ${authorization}`,
+      "apns-topic": `${env.APNS_TOPIC}.push-type.liveactivity`,
+      "apns-push-type": "liveactivity",
+      "apns-priority": "10",
+      "apns-expiration": "0",
+      "apns-collapse-id": "enzo-feed-state",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(liveActivityPayload(nextFeedAt, timestamp)),
+  });
+  if (response.ok) return;
+
+  const failure = await response
+    .json<{ reason?: string }>()
+    .catch((): { reason?: string } => ({}));
+  if (shouldDisablePushToken(response.status, failure.reason)) {
+    await disableLiveActivityToken(env, activity.token);
+  }
+  console.log(JSON.stringify({
+    level: "error",
+    message: "APNs Live Activity update failed",
+    activityId: activity.activity_id,
+    environment: activity.environment,
+    status: response.status,
+    reason: failure.reason ?? "Unknown",
+  }));
+}
+async function sendWidgetNotification(
+  env: Env,
+  authorization: string,
+  widget: WidgetPushTokenRow,
+) {
+  const host = widget.environment === "sandbox"
+    ? "https://api.sandbox.push.apple.com"
+    : "https://api.push.apple.com";
+  const response = await fetch(`${host}/3/device/${widget.token}`, {
+    method: "POST",
+    headers: {
+      authorization: `bearer ${authorization}`,
+      "apns-topic": `${env.APNS_TOPIC}.push-type.widgets`,
+      "apns-push-type": "widgets",
+      "apns-expiration": "0",
+      "apns-collapse-id": "enzo-widget-state",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(widgetPushPayload()),
+  });
+  if (response.ok) return;
+
+  const failure = await response
+    .json<{ reason?: string }>()
+    .catch((): { reason?: string } => ({}));
+  if (shouldDisablePushToken(response.status, failure.reason)) {
+    await disableWidgetPushToken(env, widget.token);
+  }
+  console.log(JSON.stringify({
+    level: "error",
+    message: "APNs WidgetKit update failed",
+    environment: widget.environment,
+    status: response.status,
+    reason: failure.reason ?? "Unknown",
+  }));
+}
+
 
 async function sendStateChangeNotification(
   env: Env,
@@ -366,12 +495,7 @@ async function sendStateChangeNotification(
   const failure = await response
     .json<{ reason?: string }>()
     .catch((): { reason?: string } => ({}));
-  if (
-    response.status === 410
-    || failure.reason === "BadDeviceToken"
-    || failure.reason === "DeviceTokenNotForTopic"
-    || failure.reason === "Unregistered"
-  ) {
+  if (shouldDisablePushToken(response.status, failure.reason)) {
     await disablePushDevice(env, device.token);
   }
   console.log(JSON.stringify({
@@ -384,17 +508,48 @@ async function sendStateChangeNotification(
 }
 
 async function sendStateChangeNotifications(env: Env) {
-  const { results } = await env.DB.prepare(
-    `SELECT token, environment
-     FROM push_devices
-     WHERE disabled_at IS NULL`,
-  ).all<PushDeviceRow>();
-  if (results.length === 0) return;
+  // Allocate before reading D1 so an older snapshot can never carry a newer
+  // ActivityKit timestamp than a later state-change job.
+  const liveActivityTimestamp = await nextLiveActivityTimestamp(env);
+  const [
+    { results: devices },
+    { results: activities },
+    { results: widgets },
+    state,
+  ] = await Promise.all([
+    env.DB.prepare(
+      `SELECT token, environment
+       FROM push_devices
+       WHERE disabled_at IS NULL`,
+    ).all<PushDeviceRow>(),
+    env.DB.prepare(
+      `SELECT token, activity_id, event_id, environment
+       FROM live_activity_tokens
+       WHERE disabled_at IS NULL`,
+    ).all<LiveActivityTokenRow>(),
+    env.DB.prepare(
+      `SELECT token, environment
+       FROM widget_push_tokens
+       WHERE disabled_at IS NULL`,
+    ).all<WidgetPushTokenRow>(),
+    readState(env),
+  ]);
+  if (devices.length === 0 && activities.length === 0 && widgets.length === 0) return;
 
   const authorization = await providerToken(env);
-  await Promise.all(
-    results.map((device) => sendStateChangeNotification(env, authorization, device)),
-  );
+  await Promise.all([
+    ...devices.map((device) => sendStateChangeNotification(env, authorization, device)),
+    ...activities.map((activity) =>
+      sendLiveActivityNotification(
+        env,
+        authorization,
+        activity,
+        state.nextFeedAt,
+        liveActivityTimestamp,
+      )
+    ),
+    ...widgets.map((widget) => sendWidgetNotification(env, authorization, widget)),
+  ]);
 }
 
 function notifyStateChange(env: Env, ctx: ExecutionContext) {
@@ -442,6 +597,96 @@ async function handleApi(request: Request, url: URL, env: Env, ctx: ExecutionCon
       const message = error instanceof Error ? error.message : "Invalid push device";
       return json({ ok: false, error: message }, { status: 400 });
     }
+  }
+  if (request.method === "POST" && url.pathname === "/api/widget-push-devices") {
+    try {
+      const body = await request.json() as Record<string, unknown>;
+      const token = typeof body.token === "string" ? body.token.toLowerCase() : "";
+      const environment = body.environment;
+      const enabled = body.enabled;
+      if (!/^(?:[0-9a-f]{2}){16,128}$/.test(token)) {
+        throw new Error("token must be a hexadecimal WidgetKit push token");
+      }
+      if (environment !== "sandbox" && environment !== "production") {
+        throw new Error("environment must be sandbox or production");
+      }
+      if (typeof enabled !== "boolean") {
+        throw new Error("enabled must be a boolean");
+      }
+      await env.DB.prepare(
+        `INSERT INTO widget_push_tokens (token, environment, disabled_at)
+         VALUES (
+           ?1,
+           ?2,
+           CASE WHEN ?3 = 1 THEN NULL ELSE strftime('%Y-%m-%dT%H:%M:%fZ', 'now') END
+         )
+         ON CONFLICT (token) DO UPDATE SET
+           environment = excluded.environment,
+           disabled_at = excluded.disabled_at,
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
+      ).bind(token, environment, enabled ? 1 : 0).run();
+      return json({ ok: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid WidgetKit push device";
+      return json({ ok: false, error: message }, { status: 400 });
+    }
+  }
+
+
+  if (request.method === "POST" && url.pathname === "/api/live-activities") {
+    try {
+      const body = await request.json() as Record<string, unknown>;
+      const token = typeof body.token === "string" ? body.token.toLowerCase() : "";
+      const activityID = typeof body.activityID === "string" ? body.activityID.trim() : "";
+      const eventID = typeof body.eventID === "string" ? body.eventID.trim() : "";
+      const environment = body.environment;
+      if (!/^(?:[0-9a-f]{2}){16,128}$/.test(token)) {
+        throw new Error("token must be a hexadecimal ActivityKit push token");
+      }
+      if (!activityID || activityID.length > 128) {
+        throw new Error("activityID is required");
+      }
+      if (!eventID || eventID.length > 128) {
+        throw new Error("eventID is required");
+      }
+      if (environment !== "sandbox" && environment !== "production") {
+        throw new Error("environment must be sandbox or production");
+      }
+      await env.DB.batch([
+        env.DB.prepare(
+          `UPDATE live_activity_tokens
+           SET disabled_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+               updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+           WHERE activity_id = ?1 AND token <> ?2 AND disabled_at IS NULL`,
+        ).bind(activityID, token),
+        env.DB.prepare(
+          `INSERT INTO live_activity_tokens (token, activity_id, event_id, environment)
+           VALUES (?1, ?2, ?3, ?4)
+           ON CONFLICT (token) DO UPDATE SET
+             activity_id = excluded.activity_id,
+             event_id = excluded.event_id,
+             environment = excluded.environment,
+             disabled_at = NULL,
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
+        ).bind(token, activityID, eventID, environment),
+      ]);
+      return json({ ok: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid Live Activity";
+      return json({ ok: false, error: message }, { status: 400 });
+    }
+  }
+
+  const liveActivityMatch = url.pathname.match(/^\/api\/live-activities\/([^/]+)$/);
+  if (request.method === "DELETE" && liveActivityMatch) {
+    const activityID = decodeURIComponent(liveActivityMatch[1]!);
+    await env.DB.prepare(
+      `UPDATE live_activity_tokens
+       SET disabled_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+       WHERE activity_id = ?1 AND disabled_at IS NULL`,
+    ).bind(activityID).run();
+    return json({ ok: true });
   }
 
   if (request.method === "POST" && url.pathname === "/api/events") {
