@@ -1,62 +1,58 @@
-# Enzo local app
+# Enzo API (Cloudflare Worker)
 
-The local API uses native Postgres as its source of truth. After a mutation, its
-`legacy-sync.ts` adapter invokes the legacy CLI to upsert/delete the matching
-Sheet event by ID and, for feed changes, reassert the shared Reminder using the
-Postgres-calculated next-feed deadline. The adapter retries three times by
-default; override that with `ENZO_LEGACY_SYNC_ATTEMPTS`.
+The API runs on Cloudflare Workers with D1 as the source of truth, deployed at
+`https://enzo-api.btn0s.workers.dev`. Every `/api/*` route requires
+`Authorization: Bearer <token>`, checked against the `ENZO_API_TOKEN` Worker
+secret. The dashboard at `/` is a static asset that prompts for the token once
+and stores it in `localStorage`.
 
-Postgres success and legacy-sync success are reported separately. The iOS app
-keeps the saved Postgres state and surfaces a visible warning if the Sheet or
-Reminder could not be synchronized.
+The legacy Sheets/Reminders tracker is fully decoupled; this Worker never
+calls into it.
 
-## First-time setup on macOS
-
-```bash
-brew install postgresql@17
-brew services start postgresql@17
-/opt/homebrew/opt/postgresql@17/bin/createdb enzo
-```
-
-Postgres initializes the schema automatically when the API starts:
+## Develop
 
 ```bash
 cd apps/server
-bun start
+bun install
+bun run dev          # wrangler dev on http://127.0.0.1:4318
 ```
 
-Open <http://127.0.0.1:4318>. The default connection is
-`postgresql://localhost/enzo`; override it with `DATABASE_URL`.
-
-## One-time legacy import
-
-Download the Tracker tab as CSV, then import it without modifying the Sheet:
+Local dev uses a local D1 simulation and reads `ENZO_API_TOKEN` from
+`.dev.vars` (gitignored; default `local-dev-token`). Apply migrations locally
+with:
 
 ```bash
-bun apps/server/import-tracker.ts '/path/to/Enzo Tracker - Tracker.csv'
+bunx wrangler d1 migrations apply enzo --local
 ```
 
-The importer is idempotent. Rows with legacy event IDs retain them; paper
-backfill rows receive deterministic IDs. It also corrects the legacy Sheet’s
-mixed UTC/local-time behavior.
+Point the iOS Simulator at local dev with the `ENZO_API_BASE_URL` environment
+variable.
 
-## Tailscale preview
-
-The API listens on localhost. Expose it privately without opening a LAN port:
+## Deploy
 
 ```bash
-tailscale serve --bg --https=8443 localhost:4318
+bun run deploy
 ```
 
-Do not reset other Serve routes on the Mac. Remove only this route with:
+Schema changes go in `migrations/` and are applied with:
 
 ```bash
-tailscale serve --https=8443 off
+bunx wrangler d1 migrations apply enzo --remote
 ```
 
-## Current trust model
+Rotate the token with `bunx wrangler secret put ENZO_API_TOKEN`, and mirror it
+into `apps/ios/App/Secrets.swift`.
 
-- Postgres and the API bind locally on the Mac.
-- Tailscale is the remote-access boundary.
-- Deletes are soft deletes in Postgres.
-- There are no user accounts yet; tailnet membership is the authorization layer.
+## History
+
+The API originally ran as a local Bun server against native Postgres, exposed
+over Tailscale. That data was migrated one-time into D1 (63 events, including
+the initial import from the legacy Google Sheet). Soft deletes are still used;
+`deleted_at` hides an event without destroying it.
+
+## Trust model
+
+- D1 and the Worker are the durable, always-on backend.
+- A single shared bearer token is the authorization layer; there are no user
+  accounts yet.
+- Deletes are soft deletes.

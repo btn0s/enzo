@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "enzo-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ENZO_TIMEZONE": "America/Phoenix",
+    "ENZO_INTERVAL_MINUTES": "180"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "enzo",
+      "database_id": "11e169c0-5966-40d2-86e3-696f7ee926ba",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "assets": {
+    "directory": "./public",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

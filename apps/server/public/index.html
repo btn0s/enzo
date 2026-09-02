@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f4efe7">
-  <title>Enzo — Local prototype</title>
+  <title>Enzo — Cloud prototype</title>
   <style>
     :root {
       color-scheme: light;
@@ -90,8 +90,8 @@
 <body>
   <main>
     <header>
-      <h1>Enzo <span>local prototype</span></h1>
-      <div class="status" id="connection">Local</div>
+      <h1>Enzo <span>cloud prototype</span></h1>
+      <div class="status" id="connection">Cloud</div>
     </header>
 
     <section class="card hero">
@@ -172,10 +172,23 @@
     }
 
     async function api(path, options) {
+      let token = localStorage.getItem("enzo-api-token") ?? "";
+      if (!token) {
+        token = (prompt("Enzo API token") ?? "").trim();
+        if (token) localStorage.setItem("enzo-api-token", token);
+      }
       const response = await fetch(path, {
         ...options,
-        headers: { "content-type": "application/json", ...(options?.headers ?? {}) },
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${token}`,
+          ...(options?.headers ?? {}),
+        },
       });
+      if (response.status === 401) {
+        localStorage.removeItem("enzo-api-token");
+        throw new Error("Bad API token — reload to re-enter it");
+      }
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? "Request failed");
       return body;
@@ -184,7 +197,7 @@
     async function load() {
       try {
         state = await api("/api/state");
-        $("#connection").textContent = "Local · Postgres";
+        $("#connection").textContent = "Cloudflare · D1";
         render();
       } catch (error) {
         $("#connection").textContent = "Offline";
@@ -214,7 +227,7 @@
       $("#pees").textContent = state.today.pees;
       $("#poops").textContent = state.today.poops;
       $("#day-label").textContent = dateOnly.format(new Date());
-      $("#storage-label").textContent = "Postgres · local";
+      $("#storage-label").textContent = "D1 · Cloudflare";
       $("#debug").textContent = JSON.stringify(state, null, 2);
 
       const timeline = $("#timeline");

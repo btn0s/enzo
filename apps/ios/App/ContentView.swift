@@ -5,9 +5,6 @@ struct ContentView: View {
     @Bindable var model: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
-    @FocusState private var composerFocused: Bool
-    @State private var pressStartedAt: Date?
-    @State private var voiceStartTask: Task<Void, Never>?
     @State private var settingsRoute: SettingsRoute?
 
     var body: some View {
@@ -37,7 +34,16 @@ struct ContentView: View {
                 }
                 .scrollIndicators(.hidden)
                 .refreshable { await model.load() }
+
+                if !model.hasCompletedInitialLoad {
+                    DashboardSkeleton(reduceMotion: reduceMotion)
+                        .transition(.opacity)
+                }
             }
+            .animation(
+                reduceMotion ? nil : .easeOut(duration: 0.25),
+                value: model.hasCompletedInitialLoad
+            )
             .foregroundStyle(EnzoPalette.ink)
             .navigationTitle("enzo")
             .navigationBarTitleDisplayMode(.inline)
@@ -47,17 +53,32 @@ struct ContentView: View {
                     Button {
                         settingsRoute = .profile
                     } label: {
-                        Image(systemName: "gearshape")
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: "gearshape")
+                            if model.alarmWarning != nil {
+                                Circle()
+                                    .fill(EnzoPalette.attention)
+                                    .frame(width: 8, height: 8)
+                                    .overlay {
+                                        Circle().stroke(EnzoPalette.canvas, lineWidth: 1.5)
+                                    }
+                                    .offset(x: 3, y: -3)
+                                    .accessibilityHidden(true)
+                            }
+                        }
                     }
-                    .accessibilityLabel("Settings")
+                    .accessibilityLabel(
+                        model.alarmWarning == nil
+                            ? "Settings"
+                            : "Settings, alarm needs attention"
+                    )
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 10) {
-                composerDock
+                actionDock
                     .padding(.horizontal, 14)
                     .padding(.bottom, 5)
             }
-            .scrollDismissesKeyboard(.interactively)
             .task {
                 guard !isRunningUnitTests else { return }
                 await model.load()
@@ -66,7 +87,6 @@ struct ContentView: View {
                 guard phase == .active, !isRunningUnitTests else { return }
                 Task { await model.load() }
             }
-            .onOpenURL { model.handle(url: $0) }
             .sheet(item: $model.editor) { route in
                 Group {
                     switch route {
@@ -86,11 +106,11 @@ struct ContentView: View {
                     ProfileSettingsView(model: model)
                         .presentationDetents([.large])
                         .presentationDragIndicator(.visible)
-                case .newbornGuide:
-                    NewbornGuideSheet(
+                case .goals:
+                    GoalsExplainerSheet(
                         profile: profile,
-                        weightKg: model.currentWeightKg,
-                        state: model.state
+                        goals: model.goals(),
+                        unit: model.volumeUnit
                     )
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
@@ -109,46 +129,53 @@ struct ContentView: View {
     }
 
     private var nextFeedBanner: some View {
-        VStack(spacing: 10) {
-            Text("NEXT FEED")
-                .font(.caption.weight(.bold))
-                .tracking(1.6)
-                .foregroundStyle(EnzoPalette.accent)
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("NEXT FEED")
+                    .font(.caption2.weight(.bold))
+                    .tracking(1.5)
+                    .foregroundStyle(EnzoPalette.accent)
 
-            if let next = model.state?.nextFeedAt {
-                TimelineView(.periodic(from: Date.now, by: 1)) { context in
-                    if next > context.date {
-                        Text(timerInterval: context.date...next, countsDown: true)
-                            .contentTransition(.numericText(countsDown: true))
-                    } else {
-                        Text("Due now")
-                            .foregroundStyle(EnzoPalette.attention)
+                if let next = model.state?.nextFeedAt {
+                    TimelineView(.periodic(from: Date.now, by: 1)) { context in
+                        if next > context.date {
+                            Text(timerInterval: context.date...next, countsDown: true)
+                                .contentTransition(.numericText(countsDown: true))
+                        } else {
+                            Text("Due now")
+                                .foregroundStyle(EnzoPalette.attention)
+                        }
                     }
-                }
-                .font(.system(size: 56, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .minimumScaleFactor(0.72)
-                .lineLimit(1)
+                    .font(.system(size: 40, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.68)
+                    .lineLimit(1)
 
-                Label(
-                    next.formatted(date: .omitted, time: .shortened),
-                    systemImage: "clock"
-                )
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(EnzoPalette.muted)
-            } else {
-                Text("No feed scheduled")
-                    .font(.system(.title, design: .rounded, weight: .semibold))
-                Text("Log a completed feed to begin the next three-hour window.")
-                    .font(.subheadline)
+                    Label(
+                        "Due \(next.formatted(date: .omitted, time: .shortened))",
+                        systemImage: "clock"
+                    )
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(EnzoPalette.muted)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("Not scheduled")
+                        .font(.system(.title2, design: .rounded, weight: .semibold))
+                    Text("Log a feed to start the clock")
+                        .font(.caption)
+                        .foregroundStyle(EnzoPalette.muted)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Divider()
+                .overlay(EnzoPalette.divider)
+                .frame(height: 74)
+
+            bottleTarget
+                .frame(width: 104, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, minHeight: 166)
-        .padding(.horizontal, 22)
-        .padding(.vertical, 24)
+        .frame(maxWidth: .infinity, minHeight: 100)
+        .padding(18)
         .background(
             LinearGradient(
                 colors: [EnzoPalette.heroStart, EnzoPalette.heroEnd],
@@ -162,10 +189,39 @@ struct ContentView: View {
         .accessibilityElement(children: .combine)
     }
 
+    private var bottleTarget: some View {
+        let bottle = model.goals().bottleMl
+
+        return VStack(alignment: .leading, spacing: 3) {
+            Text("EACH BOTTLE")
+                .font(.caption2.weight(.bold))
+                .tracking(1.1)
+                .foregroundStyle(EnzoPalette.accent)
+
+            if let bottle {
+                Text("≈ \(model.volumeUnit.format(range: bottle.value))")
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                Text(bottle.source.label)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(EnzoPalette.muted)
+            } else {
+                Text("Add weight")
+                    .font(.subheadline.weight(.semibold))
+                Text("in Checkups")
+                    .font(.caption2)
+                    .foregroundStyle(EnzoPalette.muted)
+            }
+        }
+    }
+
     @ViewBuilder
-    private var composerDock: some View {
+    private var actionDock: some View {
         if #available(iOS 26.0, *) {
-            composerDockContent
+            actionDockContent
                 .padding(7)
                 .frame(minHeight: 58)
                 .glassEffect(
@@ -174,7 +230,7 @@ struct ContentView: View {
                 )
                 .shadow(color: .black.opacity(0.12), radius: 18, y: 8)
         } else {
-            composerDockContent
+            actionDockContent
                 .padding(7)
                 .frame(minHeight: 58)
                 .background(.regularMaterial, in: Capsule())
@@ -182,207 +238,68 @@ struct ContentView: View {
         }
     }
 
-    private var composerDockContent: some View {
-        ZStack {
-            if model.voice.isListening {
-                listeningComposer
-                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
-            } else {
-                idleComposer
-                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+    private var actionDockContent: some View {
+        HStack(spacing: 7) {
+            dockButton(title: "Add feed", image: "BabyBottle") {
+                model.presentNewFeed()
             }
-        }
-        .animation(
-            reduceMotion ? nil : .smooth(duration: 0.22),
-            value: model.voice.isListening
-        )
-    }
-
-    private var idleComposer: some View {
-        HStack(spacing: 3) {
-            Menu {
-                Button {
-                    model.presentNewFeed()
-                } label: {
-                    Label("Feed", image: "BabyBottle")
-                }
-                Button {
-                    model.presentNewDiaper()
-                } label: {
-                    Label("Diaper", image: "BabyDiaper")
-                }
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 22, weight: .medium))
-                    .frame(width: 44, height: 44)
-                    .contentShape(.circle)
-            }
-            .buttonStyle(ComposerPressStyle())
-            .accessibilityLabel("Add manually")
-
-            TextField(
-                "",
-                text: $model.typedCommand,
-                prompt: Text(composerPlaceholder)
-                    .foregroundStyle(EnzoPalette.muted.opacity(0.76))
-            )
-                .font(.body)
-                .lineLimit(1)
-                .textInputAutocapitalization(.sentences)
-                .submitLabel(.send)
-                .focused($composerFocused)
-                .frame(height: 44, alignment: .center)
-                .onSubmit { sendComposer() }
-                .onChange(of: model.voice.transcript) { _, transcript in
-                    if model.voice.isListening { model.typedCommand = transcript }
-                }
-                .accessibilityLabel("Describe what happened")
-                .accessibilityIdentifier("commandComposer")
-
-            voiceComposerButton
-
-            if !model.typedCommand.trimmed.isEmpty {
-                Button(action: sendComposer) {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(EnzoPalette.onAccent)
-                        .frame(width: 44, height: 44)
-                        .background(EnzoPalette.accent, in: Circle())
-                        .contentShape(.circle)
-                }
-                .buttonStyle(ComposerPressStyle())
-                .accessibilityLabel("Send")
-                .transition(.opacity.combined(with: .scale(scale: 0.25)))
+            dockButton(title: "Add diaper", image: "BabyDiaper") {
+                model.presentNewDiaper()
             }
         }
     }
 
-    private var listeningComposer: some View {
-        HStack(spacing: 8) {
-            Button {
-                Task { await model.cancelVoice() }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 44, height: 44)
-                    .background(EnzoPalette.controlFill, in: Circle())
-                    .contentShape(.circle)
-            }
-            .buttonStyle(ComposerPressStyle())
-            .accessibilityLabel("Cancel dictation")
-
-            ListeningWaveform()
-                .frame(maxWidth: .infinity)
-                .accessibilityLabel("Listening")
-                .accessibilityValue(model.voice.transcript)
-
-            Button {
-                Task { await model.stopVoiceForReview() }
-            } label: {
-                Image(systemName: "stop.fill")
-                    .font(.system(size: 13, weight: .bold))
-                    .frame(width: 44, height: 44)
-                    .background(EnzoPalette.controlFill, in: Circle())
-                    .contentShape(.circle)
-            }
-            .buttonStyle(ComposerPressStyle())
-            .accessibilityLabel("Stop dictation")
-
-            Button {
-                Task { await model.finishVoice() }
-            } label: {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 19, weight: .bold))
-                    .foregroundStyle(EnzoPalette.onAccent)
-                    .frame(width: 44, height: 44)
-                    .background(EnzoPalette.accent, in: Circle())
-                    .contentShape(.circle)
-            }
-            .buttonStyle(ComposerPressStyle())
-            .accessibilityLabel("Send dictation")
+    private func dockButton(
+        title: String,
+        image: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, image: image)
+                .font(.body.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(EnzoPalette.controlFill, in: Capsule())
+                .contentShape(.capsule)
         }
-    }
-
-    private var voiceComposerButton: some View {
-        Image(systemName: "mic.fill")
-            .font(.system(size: 19, weight: .semibold))
-            .foregroundStyle(model.voice.errorMessage == nil ? EnzoPalette.ink : EnzoPalette.attention)
-            .frame(width: 44, height: 44)
-            .contentShape(.circle)
-            .gesture(voiceGesture)
-            .accessibilityLabel("Log by voice")
-            .accessibilityHint("Tap to dictate, or hold while speaking")
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { Task { await model.beginVoice() } }
-    }
-
-    private var voiceGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { _ in
-                guard pressStartedAt == nil else { return }
-                pressStartedAt = Date()
-                voiceStartTask = Task { await model.beginVoice() }
-            }
-            .onEnded { _ in
-                let duration = Date().timeIntervalSince(pressStartedAt ?? Date())
-                let startTask = voiceStartTask
-                pressStartedAt = nil
-                voiceStartTask = nil
-                guard duration >= 0.35 else {
-                    model.status = "Listening"
-                    return
-                }
-                Task {
-                    await startTask?.value
-                    await model.stopVoiceForReview()
-                }
-            }
-    }
-
-    private var composerPlaceholder: String {
-        if model.voice.errorMessage != nil { return "Microphone access needed" }
-        if model.isBusy { return "Saving…" }
-        return "What happened?"
-    }
-
-    private func sendComposer() {
-        guard !model.typedCommand.trimmed.isEmpty else { return }
-        composerFocused = false
-        Task { await model.processTypedCommand() }
+        .buttonStyle(ComposerPressStyle())
+        .disabled(model.isBusy)
+        .accessibilityLabel(title)
     }
 
     private var compactTodayCard: some View {
-        let metrics = todayMetrics
+        let metrics = todayDashboardMetrics
 
-        return VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Today")
                     .font(.title2.weight(.bold))
                 Spacer()
-                Text("\(Date.now.formatted(.dateTime.month(.abbreviated).day())) · \(DailyInsightBuilder.dayLabel(profile: profile))")
+                Text("\(Date.now.formatted(.dateTime.month(.abbreviated).day())) · Day \(profile.dayOfLife())")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(EnzoPalette.muted)
             }
 
-            Divider().overlay(EnzoPalette.divider)
-
-            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 12) {
-                ForEach(metrics) { metric in
-                    todayMetricRow(metric)
-                }
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 12),
+                    GridItem(.flexible(), spacing: 12),
+                ],
+                spacing: 12
+            ) {
+                todayMetricTile(metrics.feed)
+                todayMetricTile(metrics.milk)
+                todayMetricTile(metrics.pee)
+                todayMetricTile(metrics.poop)
             }
-            .frame(maxWidth: .infinity)
-
-            Divider().overlay(EnzoPalette.divider)
 
             Button {
-                settingsRoute = .newbornGuide
+                settingsRoute = .goals
             } label: {
                 HStack(spacing: 8) {
-                    Label("General newborn guide", systemImage: "book.pages.fill")
+                    Label("How goals are calculated", systemImage: "target")
                     Spacer()
-                    Text(DailyInsightBuilder.dayLabel(profile: profile))
-                    Image(systemName: "chevron.up")
+
+                    Image(systemName: "chevron.right")
                         .font(.caption2.weight(.bold))
                 }
                 .font(.caption.weight(.semibold))
@@ -391,7 +308,7 @@ struct ContentView: View {
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .accessibilityHint("Opens today’s feeding and diaper guidance")
+            .accessibilityHint("Shows the guidance and checkup values behind today’s targets")
         }
         .padding(18)
         .background(EnzoPalette.surface, in: .rect(cornerRadius: 24))
@@ -399,130 +316,94 @@ struct ContentView: View {
         .shadow(color: .black.opacity(0.045), radius: 12, y: 5)
     }
 
-    private func todayMetricRow(_ metric: TodayMetric) -> some View {
-        return GridRow(alignment: .center) {
-            MetricGlyph(kind: metric.icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(EnzoPalette.accent)
-                .frame(width: 20)
-
-            Text(metric.title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(EnzoPalette.ink)
-
-            HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text(metric.value)
-                    .font(.system(.title3, design: .rounded, weight: .bold))
-                    .monospacedDigit()
-                Text("/ \(metric.goal)")
-                    .font(.subheadline.weight(.medium))
+    private func todayMetricTile(_ metric: TodayTileMetrics) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(metric.title)
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(EnzoPalette.muted)
+                Spacer(minLength: 8)
+                Image(systemName: metric.status.symbol)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(metric.status.color)
+                    .accessibilityLabel(metric.status.accessibilityLabel)
             }
-            .frame(maxWidth: .infinity, alignment: .trailing)
 
-            Image(systemName: metric.status.symbol)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(metric.status.color)
-                .frame(width: 22, alignment: .trailing)
-                .accessibilityLabel(metric.status.accessibilityLabel)
+            Text(metric.value)
+                .font(.system(.title2, design: .rounded, weight: .bold))
+                .monospacedDigit()
+                .minimumScaleFactor(0.75)
+                .lineLimit(1)
+
+            Text(metric.goal)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(EnzoPalette.muted)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(EnzoPalette.controlFill, in: .rect(cornerRadius: 18))
         .accessibilityElement(children: .combine)
     }
 
-    private var todayMetrics: [TodayMetric] {
-        let day = profile.dayOfLife()
-        let state = model.state
-        let insights = Dictionary(
-            uniqueKeysWithValues: DailyInsightBuilder.make(state: state, profile: profile).map { ($0.id, $0) }
-        )
-        let feedRange = DailyInsightBuilder.feedRangeForDay(day)
-        let wetMinimum = DailyInsightBuilder.wetMinimumForDay(day)
-        let dirtyMinimum = DailyInsightBuilder.dirtyMinimumForDay(day)
-        let milkReference = DailyInsightBuilder.dailyMilkReference(weightKg: model.currentWeightKg)
-        let milkTotal = state?.today.milkMl ?? 0
-        let milkStatus = DailyInsightBuilder.dailyMilkStatus(
-            totalMl: milkTotal,
-            weightKg: model.currentWeightKg,
-            day: day
-        )
-        let feedStatus = insights["feeds"]?.status ?? .referenceOnly
-        let wetStatus = insights["wet"]?.status ?? .referenceOnly
-        let dirtyStatus = insights["dirty"]?.status ?? .referenceOnly
+    private var todayDashboardMetrics: TodayDashboardMetrics {
+        let today = model.state?.today
+        let goals = model.goals()
+        let feeds = today?.feeds ?? 0
+        let milkMl = today?.milkMl ?? 0
+        let pees = today?.pees ?? 0
+        let poops = today?.poops ?? 0
 
-        return [
-            TodayMetric(
-                id: "milk",
-                title: "Milk",
-                icon: .milk,
-                value: "\(Int(milkTotal.rounded()))",
-                goal: milkReference.map {
-                    "\(Int($0.lowerBound.rounded()))–\(Int($0.upperBound.rounded())) mL"
-                } ?? "add weight",
-                status: milkMetricStatus(
-                    status: milkStatus,
-                    currentMl: milkTotal,
-                    reference: milkReference,
-                    day: day
-                )
-            ),
-            TodayMetric(
-                id: "feeds",
+        return TodayDashboardMetrics(
+            feed: TodayTileMetrics(
                 title: "Feeds",
-                icon: .feeds,
-                value: "\(state?.today.feeds ?? 0)",
-                goal: "\(Int(feedRange.lowerBound))–\(Int(feedRange.upperBound))",
-                status: metricStatus(
-                    status: feedStatus,
-                    current: state?.today.feeds ?? 0,
-                    goal: Int(feedRange.lowerBound)
+                value: "\(feeds)",
+                goal: "Goal \(integerRange(goals.feeds.value))",
+                status: DailyReference.pace(
+                    current: Double(feeds),
+                    goal: Double(goals.feeds.value.lowerBound),
+                    slack: 1
                 )
             ),
-            TodayMetric(
-                id: "wet",
-                title: "Wet",
-                icon: .wet,
-                value: "\(state?.today.pees ?? 0)",
-                goal: wetMinimum.map { "\($0)+" } ?? "—",
-                status: metricStatus(
-                    status: wetStatus,
-                    current: state?.today.pees ?? 0,
-                    goal: wetMinimum
+            milk: TodayTileMetrics(
+                title: "Milk",
+                value: model.volumeUnit.format(ml: milkMl),
+                goal: goals.dailyMilkMl.map {
+                    "Goal \(model.volumeUnit.format(range: $0.value))"
+                } ?? "Add weight in Checkups",
+                status: DailyReference.pace(
+                    current: milkMl,
+                    goal: goals.dailyMilkMl.map { $0.value.lowerBound },
+                    slack: 30
                 )
             ),
-            TodayMetric(
-                id: "dirty",
-                title: "Dirty",
-                icon: .dirty,
-                value: "\(state?.today.poops ?? 0)",
-                goal: dirtyMinimum.map { "\($0)+" } ?? "—",
-                status: metricStatus(
-                    status: dirtyStatus,
-                    current: state?.today.poops ?? 0,
-                    goal: dirtyMinimum
+            pee: TodayTileMetrics(
+                title: "Pee",
+                value: "\(pees)",
+                goal: goals.peeMin.map { "Goal \($0.value)+" } ?? "Tracking only",
+                status: DailyReference.pace(
+                    current: Double(pees),
+                    goal: goals.peeMin.map { Double($0.value) },
+                    slack: 1
                 )
             ),
-        ]
+            poop: TodayTileMetrics(
+                title: "Poop",
+                value: "\(poops)",
+                goal: goals.poopMin.map { "Goal \($0.value)+" } ?? "Tracking only",
+                status: DailyReference.pace(
+                    current: Double(poops),
+                    goal: goals.poopMin.map { Double($0.value) },
+                    slack: 1
+                )
+            )
+        )
     }
 
-    private func metricStatus(
-        status: DailyInsight.Status,
-        current: Int,
-        goal: Int?
-    ) -> TodayMetricStatus {
-        guard let goal else { return .tracking }
-        if current >= goal { return .goalMet }
-        return status == .attention ? .belowPace : .onPace
-    }
-
-    private func milkMetricStatus(
-        status: DailyInsight.Status,
-        currentMl: Double,
-        reference: ClosedRange<Double>?,
-        day: Int
-    ) -> TodayMetricStatus {
-        guard day >= 7, let reference else { return .tracking }
-        if currentMl >= reference.lowerBound { return .goalMet }
-        return status == .attention ? .belowPace : .onPace
+    private func integerRange(_ range: ClosedRange<Int>) -> String {
+        range.lowerBound == range.upperBound
+            ? "\(range.lowerBound)"
+            : "\(range.lowerBound)–\(range.upperBound)"
     }
 
     private var profile: EnzoProfile {
@@ -593,8 +474,9 @@ struct ContentView: View {
     private func eventLabel(_ event: ServerEvent) -> String {
         switch event.content {
         case .feed(let feed):
-            return feed.amountMl.map { "\(Int($0)) mL \(feed.milkType == .breastMilk ? "breast milk" : "formula")" }
-                ?? "\(feed.milkType == .breastMilk ? "Breast milk" : "Formula") feed · amount pending"
+            return feed.amountMl.map {
+                "\(model.volumeUnit.format(ml: $0)) \(feed.milkType == .breastMilk ? "breast milk" : "formula")"
+            } ?? "\(feed.milkType == .breastMilk ? "Breast milk" : "Formula") feed · amount pending"
         case .diaper(let diaper):
             if diaper.pee && diaper.poop { return "Pee + poop" }
             return diaper.pee ? "Pee" : "Poop"
@@ -611,7 +493,7 @@ private struct EventLogView: View {
         NavigationStack {
             List(model.state?.events ?? []) { event in
                 Button {
-                    editor = route(for: event)
+                    editor = EditorRoute(event: event)
                 } label: {
                     HStack(spacing: 12) {
                         EventGlyph(content: event.content)
@@ -661,33 +543,11 @@ private struct EventLogView: View {
         .tint(EnzoPalette.accent)
     }
 
-    private func route(for event: ServerEvent) -> EditorRoute {
-        switch event.content {
-        case .feed(let feed):
-            var draft = FeedDraft()
-            draft.eventID = event.id
-            draft.occurredAt = event.occurredAt
-            draft.milkType = feed.milkType
-            draft.amountMl = feed.amountMl
-            draft.notes = event.notes
-            draft.resetsTimer = feed.resetsTimer
-            return .feed(draft)
-        case .diaper(let diaper):
-            var draft = DiaperDraft()
-            draft.eventID = event.id
-            draft.occurredAt = event.occurredAt
-            draft.pee = diaper.pee
-            draft.poop = diaper.poop
-            draft.notes = event.notes
-            return .diaper(draft)
-        }
-    }
-
     private func label(for event: ServerEvent) -> String {
         switch event.content {
         case .feed(let feed):
             return feed.amountMl.map {
-                "\(Int($0)) mL \(feed.milkType == .breastMilk ? "breast milk" : "formula")"
+                "\(model.volumeUnit.format(ml: $0)) \(feed.milkType == .breastMilk ? "breast milk" : "formula")"
             } ?? "Feed"
         case .diaper(let diaper):
             if diaper.pee && diaper.poop { return "Pee + poop" }
@@ -696,38 +556,18 @@ private struct EventLogView: View {
     }
 }
 
-private struct TodayMetric: Identifiable {
-    let id: String
+private struct TodayDashboardMetrics {
+    let feed: TodayTileMetrics
+    let milk: TodayTileMetrics
+    let pee: TodayTileMetrics
+    let poop: TodayTileMetrics
+}
+
+private struct TodayTileMetrics {
     let title: String
-    let icon: TodayMetricIcon
     let value: String
     let goal: String
-    let status: TodayMetricStatus
-}
-
-private enum TodayMetricIcon {
-    case milk
-    case feeds
-    case wet
-    case dirty
-}
-
-private struct MetricGlyph: View {
-    let kind: TodayMetricIcon
-
-    @ViewBuilder
-    var body: some View {
-        switch kind {
-        case .milk:
-            BabyBottleGlyph(size: 15)
-        case .feeds:
-            Image(systemName: "repeat.circle.fill")
-        case .wet:
-            Image(systemName: "drop.fill")
-        case .dirty:
-            DiaperGlyph(size: 16)
-        }
-    }
+    let status: PaceStatus
 }
 
 private struct EventGlyph: View {
@@ -772,22 +612,17 @@ struct DiaperGlyph: View {
 
 private enum SettingsRoute: String, Identifiable {
     case profile
-    case newbornGuide
+    case goals
     case eventLog
 
     var id: String { rawValue }
 }
 
-private enum TodayMetricStatus {
-    case belowPace
-    case onPace
-    case goalMet
-    case tracking
-
+private extension PaceStatus {
     var symbol: String {
         switch self {
         case .belowPace: "arrow.down.circle.fill"
-        case .onPace: "arrow.up.circle.fill"
+        case .onPace: "clock.fill"
         case .goalMet: "checkmark.circle.fill"
         case .tracking: "minus.circle"
         }
@@ -796,8 +631,8 @@ private enum TodayMetricStatus {
     var color: Color {
         switch self {
         case .belowPace: EnzoPalette.attention
-        case .onPace, .goalMet: EnzoPalette.success
-        case .tracking: EnzoPalette.muted
+        case .goalMet: EnzoPalette.success
+        case .onPace, .tracking: EnzoPalette.muted
         }
     }
 
@@ -811,26 +646,123 @@ private enum TodayMetricStatus {
     }
 }
 
-private struct ListeningWaveform: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+private struct DashboardSkeleton: View {
+    let reduceMotion: Bool
+    @State private var pulses = false
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: reduceMotion)) { context in
-            HStack(spacing: 2.4) {
-                ForEach(0..<30, id: \.self) { index in
-                    let phase = context.date.timeIntervalSinceReferenceDate * 6.5
-                    let wave = (sin(phase + Double(index) * 0.72) + 1) / 2
-                    let envelope = sin(Double(index + 1) / 31 * .pi)
-                    let height = 4 + (wave * envelope * 17)
+        ZStack {
+            EnzoPalette.canvas.ignoresSafeArea()
+            LinearGradient(
+                colors: [
+                    EnzoPalette.warmGlow.opacity(0.52),
+                    EnzoPalette.canvas.opacity(0.12),
+                    EnzoPalette.coolGlow.opacity(0.32),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
 
-                    Capsule()
-                        .fill(EnzoPalette.muted.opacity(0.78))
-                        .frame(width: 2.4, height: height)
+            ScrollView {
+                VStack(spacing: 18) {
+                    skeletonHero
+                    skeletonToday
+                    skeletonRecent
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 8)
+                .padding(.bottom, 34)
+            }
+            .scrollDisabled(true)
+        }
+        .opacity(reduceMotion ? 1 : (pulses ? 0.72 : 1))
+        .allowsHitTesting(false)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+                pulses = true
+            }
+        }
+    }
+
+    private var skeletonHero: some View {
+        HStack(spacing: 18) {
+            VStack(alignment: .leading, spacing: 10) {
+                skeletonLine(width: 74, height: 9)
+                skeletonLine(width: 150, height: 38)
+                skeletonLine(width: 108, height: 11)
+            }
+            Spacer()
+            VStack(alignment: .leading, spacing: 8) {
+                skeletonLine(width: 82, height: 9)
+                skeletonLine(width: 74, height: 22)
+                skeletonLine(width: 62, height: 9)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 100)
+        .padding(18)
+        .background(
+            LinearGradient(
+                colors: [EnzoPalette.heroStart, EnzoPalette.heroEnd],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: .rect(cornerRadius: 30)
+        )
+    }
+
+    private var skeletonToday: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                skeletonLine(width: 78, height: 24)
+                Spacer()
+                skeletonLine(width: 104, height: 12)
+            }
+            LazyVGrid(
+                columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                spacing: 12
+            ) {
+                ForEach(0..<4, id: \.self) { _ in
+                    VStack(alignment: .leading, spacing: 9) {
+                        skeletonLine(width: 52, height: 11)
+                        skeletonLine(width: 66, height: 25)
+                        skeletonLine(width: 84, height: 9)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .background(EnzoPalette.controlFill, in: .rect(cornerRadius: 18))
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 28)
+            skeletonLine(width: 164, height: 12)
+                .padding(.vertical, 12)
         }
-        .accessibilityHidden(true)
+        .padding(18)
+        .background(EnzoPalette.surface, in: .rect(cornerRadius: 24))
+    }
+
+    private var skeletonRecent: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            skeletonLine(width: 76, height: 18)
+            ForEach(0..<3, id: \.self) { _ in
+                HStack(spacing: 12) {
+                    RoundedRectangle(cornerRadius: 17)
+                        .fill(EnzoPalette.controlFill)
+                        .frame(width: 34, height: 34)
+                    skeletonLine(width: 126, height: 12)
+                    Spacer()
+                    skeletonLine(width: 48, height: 11)
+                }
+            }
+        }
+        .padding(18)
+        .background(EnzoPalette.surface, in: .rect(cornerRadius: 24))
+    }
+
+    private func skeletonLine(width: CGFloat, height: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: height / 2)
+            .fill(EnzoPalette.controlFill)
+            .frame(width: width, height: height)
     }
 }
 
@@ -876,8 +808,4 @@ private extension UIColor {
             alpha: 1
         )
     }
-}
-
-private extension String {
-    var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
 }

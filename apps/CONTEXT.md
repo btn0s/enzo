@@ -23,3 +23,11 @@ _Avoid_: Wet event
 **Poop**:
 A dirty observation inside a Diaper.
 _Avoid_: Dirty event
+
+**Checkup**:
+A dated clinician visit recording Enzo's weight and any goals the doctor changed. The latest past Checkup is the active care plan; any goal it leaves blank falls back to published Guidance.
+_Avoid_: Appointment, override
+
+**Guidance**:
+The published age- and weight-based reference values (CDC, AAP, Safer Care Victoria, NHS) used for any goal no Checkup has set.
+_Avoid_: Default, rule

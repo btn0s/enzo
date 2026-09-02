@@ -19,25 +19,25 @@ targets:
     info:
       path: App/Info.plist
       properties:
-        CFBundleURLTypes:
-          - CFBundleURLSchemes:
-              - enzo
-        NSMicrophoneUsageDescription: Hold the talk button to dictate a feed or diaper event.
-        NSSpeechRecognitionUsageDescription: Turn short care commands into editable Enzo tracker events.
         ITSAppUsesNonExemptEncryption: false
+        NSAlarmKitUsageDescription: Enzo schedules a full-screen alarm when the next feed is due.
         NSSupportsLiveActivities: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        UILaunchScreen: {}
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchMark
+          UIImageRespectsSafeAreaInsets: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.btn0s.enzo.prototype
         PRODUCT_NAME: Enzo
         GENERATE_INFOPLIST_FILE: false
         CODE_SIGNING_ALLOWED: true
+        CODE_SIGN_ENTITLEMENTS: App/Enzo.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - target: EnzoLiveActivity
@@ -61,6 +61,7 @@ targets:
         GENERATE_INFOPLIST_FILE: false
         APPLICATION_EXTENSION_API_ONLY: true
         CODE_SIGNING_ALLOWED: true
+        CODE_SIGN_ENTITLEMENTS: LiveActivity/EnzoLiveActivity.entitlements
   EnzoPrototypeTests:
     type: bundle.unit-test
     platform: iOS

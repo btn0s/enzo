@@ -86,23 +86,60 @@ struct TodaySummary: Decodable {
     let poops: Int
 }
 
+struct Profile: Decodable, Hashable {
+    let birthAt: Date
+}
+
+/// A clinician visit. Every goal field is optional; nil means "use guidance".
+struct Checkup: Codable, Identifiable, Hashable {
+    var id: String
+    var occurredAt: Date
+    var weightKg: Double?
+    var feedIntervalMinutes: Int?
+    var feedsMin: Int?
+    var feedsMax: Int?
+    var bottleMl: Double?
+    var milkMlMin: Double?
+    var milkMlMax: Double?
+    var peeMin: Int?
+    var poopMin: Int?
+    var notes: String
+
+    static func new(at date: Date = Date()) -> Checkup {
+        Checkup(id: UUID().uuidString.lowercased(), occurredAt: date, notes: "")
+    }
+
+    /// True when the visit changed at least one goal beyond recording weight.
+    var hasOverrides: Bool {
+        feedIntervalMinutes != nil || feedsMin != nil || feedsMax != nil || bottleMl != nil
+            || milkMlMin != nil || milkMlMax != nil || peeMin != nil || poopMin != nil
+    }
+}
+
 struct ServerState: Decodable {
     let nextFeedAt: Date?
+    let intervalMinutes: Int
+    let profile: Profile
+    let checkups: [Checkup]
+    let activeCheckupId: String?
     let today: TodaySummary
     let events: [ServerEvent]
+
+    /// Latest checkup that has already happened.
+    var activeCheckup: Checkup? {
+        activeCheckupId.flatMap { id in checkups.first { $0.id == id } }
+    }
+
+    /// Most recent recorded weight from any past checkup.
+    var currentWeightKg: Double? {
+        let now = Date()
+        return checkups.first { $0.occurredAt <= now && $0.weightKg != nil }?.weightKg
+    }
 }
 
 struct MutationResponse: Decodable {
     let ok: Bool
-    let eventId: String?
-    let legacySync: LegacySyncResult?
     let state: ServerState
-}
-
-struct LegacySyncResult: Decodable {
-    let ok: Bool
-    let attempts: Int
-    let error: String?
 }
 
 struct FeedDraft: Identifiable, Hashable {
@@ -134,10 +171,26 @@ enum EditorRoute: Identifiable, Hashable {
         case .diaper(let draft): "diaper-\(draft.id)"
         }
     }
-}
 
-enum VoiceCommand {
-    case feed(FeedDraft)
-    case diaper(DiaperDraft)
-    case unrecognized
+    init(event: ServerEvent) {
+        switch event.content {
+        case .feed(let feed):
+            var draft = FeedDraft()
+            draft.eventID = event.id
+            draft.occurredAt = event.occurredAt
+            draft.milkType = feed.milkType
+            draft.amountMl = feed.amountMl
+            draft.notes = event.notes
+            draft.resetsTimer = feed.resetsTimer
+            self = .feed(draft)
+        case .diaper(let diaper):
+            var draft = DiaperDraft()
+            draft.eventID = event.id
+            draft.occurredAt = event.occurredAt
+            draft.pee = diaper.pee
+            draft.poop = diaper.poop
+            draft.notes = event.notes
+            self = .diaper(draft)
+        }
+    }
 }

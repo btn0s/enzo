@@ -12,10 +12,10 @@ None of this is a product. It's homestead technology—a small, slightly sci-fi 
 
 ## The app
 
-[`apps/`](apps/) contains the current, Postgres-backed product:
+[`apps/`](apps/) contains the current product:
 
-- [`apps/server`](apps/server/) — a local Bun server and Postgres store, exposed
-  privately over Tailscale. Postgres is the single source of truth.
+- [`apps/server`](apps/server/) — a Cloudflare Worker and D1 database, the
+  single source of truth, behind a bearer token.
 - [`apps/ios`](apps/ios/) — the native SwiftUI app, a Live Activity that keeps
   the next feed on the Lock Screen, and an AlarmKit alarm for when the window
   closes.
@@ -23,10 +23,8 @@ None of this is a product. It's homestead technology—a small, slightly sci-fi 
 Start with the [server setup](apps/server/README.md) and the
 [iOS development guide](apps/ios/README.md).
 
-After each app mutation, the server uses one explicit CLI adapter
-(`apps/server/legacy-sync.ts`) to mirror the event into the legacy Sheet and
-move the shared Reminder to the Postgres-calculated next-feed time—so the
-first prototype keeps working while the app is authoritative.
+The first prototype stands alone: nothing in the app calls into the Sheet or
+the shared Reminder anymore.
 
 ## The first prototype
 
@@ -35,7 +33,7 @@ agent-operated workflow: `bin/enzo` as the single write path, Google Sheets
 through Apps Script, and a shared urgent Apple Reminder moved forward after
 each feed. It still runs, and its full story, setup, and security notes live
 in the [legacy README](legacy/sheets-reminders/README.md). Its CSV importer
-was the one-time migration path into Postgres.
+was the one-time migration path into the app's database.
 
 ## License
 

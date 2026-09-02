@@ -5,7 +5,6 @@ import OSLog
 struct WaitingFeedActivity {
     let eventID: String
     let nextFeedAt: Date
-    let milkType: String
 }
 
 struct ActivityService {
@@ -37,12 +36,7 @@ struct ActivityService {
 
         guard let desired else { return }
         let content = ActivityContent(
-            state: FeedActivityAttributes.ContentState(
-                phase: .waiting,
-                startedAt: nil,
-                nextFeedAt: desired.nextFeedAt,
-                milkType: desired.milkType
-            ),
+            state: FeedActivityAttributes.ContentState(nextFeedAt: desired.nextFeedAt),
             // The countdown remains valid after it reaches zero. Marking it
             // stale at the due time only weakens an activity we still need.
             staleDate: nil

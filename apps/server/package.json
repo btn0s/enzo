@@ -3,8 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --watch server.ts",
-    "start": "bun server.ts",
-    "test": "bun test"
+    "dev": "wrangler dev --port 4318",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "wrangler": "^4.128.0"
   }
 }

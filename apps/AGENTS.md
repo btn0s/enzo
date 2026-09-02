@@ -2,11 +2,10 @@
 
 Read [CONTEXT.md](CONTEXT.md) for the care-event domain language.
 
-Postgres, accessed through `server/`, is the source of truth. The iOS app writes
-through the local server interface and projects the resulting next-feed state to
-ActivityKit and AlarmKit. Keep those projections reconciled with server state.
+D1, accessed through the `server/` Cloudflare Worker, is the source of truth.
+The iOS app writes through the Worker API with a bearer token and projects the
+resulting next-feed state to ActivityKit and AlarmKit. Keep those projections
+reconciled with server state.
 
-App mutations cross one legacy-sync seam: `server/legacy-sync.ts` sends an
-idempotent mutation envelope to the private legacy CLI `sync-event` command.
-That adapter mirrors the event to the Sheet and reasserts the shared Reminder.
-Keep every other app module independent from legacy implementation details.
+The legacy Sheets/Reminders tracker is fully decoupled: no app module may call
+into `legacy/` or depend on its implementation details.

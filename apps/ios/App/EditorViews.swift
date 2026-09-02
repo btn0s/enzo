@@ -1,46 +1,45 @@
 import Foundation
 import SwiftUI
+import UIKit
 
 struct FeedEditorView: View {
     @Environment(\.dismiss) private var dismiss
     let model: AppModel
     @State private var draft: FeedDraft
-    @State private var showsOptions = false
+    @State private var unit: VolumeUnit
+    /// Amount as entered, in `unit`. Converted to mL on save.
+    @State private var amount: Double?
     @State private var confirmsDeletion = false
     @FocusState private var amountFocused: Bool
 
     init(model: AppModel, draft: FeedDraft) {
         self.model = model
         _draft = State(initialValue: draft)
+        _unit = State(initialValue: model.volumeUnit)
+        _amount = State(initialValue: draft.amountMl.map(model.volumeUnit.value(fromMl:)))
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
+                    amountRow
+                    presetRow
+                } footer: {
+                    if let bottle = model.goals().bottleMl {
+                        Text("Plan: ≈ \(unit.format(range: bottle.value)) per bottle · \(bottle.source.label)")
+                    }
+                }
+
+                Section {
                     Picker("Milk", selection: $draft.milkType) {
                         ForEach(MilkType.allCases) { Text($0.label).tag($0) }
                     }
                     .pickerStyle(.segmented)
 
-                    LabeledContent("Amount") {
-                        TextField("mL", value: $draft.amountMl, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .focused($amountFocused)
-                            .frame(maxWidth: 110)
-                    }
-
                     LabeledContent("When") {
                         DatePicker("", selection: $draft.occurredAt)
                             .labelsHidden()
-                    }
-                }
-
-                Section {
-                    DisclosureGroup("More options", isExpanded: $showsOptions) {
-                        TextField("Notes", text: $draft.notes, axis: .vertical)
-                        Toggle("Set next feed alarm", isOn: $draft.resetsTimer)
                     }
                 }
 
@@ -59,8 +58,11 @@ struct FeedEditorView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
-                        .disabled((draft.amountMl ?? 0) <= 0)
+                        .disabled((amount ?? 0) <= 0)
                 }
+            }
+            .task {
+                if draft.eventID == nil { amountFocused = true }
             }
             .confirmationDialog(
                 "Delete this feed?",
@@ -73,11 +75,72 @@ struct FeedEditorView: View {
         }
     }
 
+    private var amountRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            TextField("0", value: $amount, format: .number.precision(.fractionLength(0...1)))
+                .keyboardType(.decimalPad)
+                .font(.system(size: 44, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .minimumScaleFactor(0.6)
+                .focused($amountFocused)
+
+            Menu {
+                Picker("Unit", selection: $unit) {
+                    ForEach(VolumeUnit.allCases) { Text($0.label).tag($0) }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(unit.symbol)
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.bold))
+                }
+                .font(.headline)
+                .foregroundStyle(EnzoPalette.accent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(EnzoPalette.accentSoft, in: Capsule())
+            }
+            .onChange(of: unit) { old, new in
+                guard let current = amount else { return }
+                amount = new.value(fromMl: old.ml(from: current))
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
+    private var presetRow: some View {
+        HStack(spacing: 8) {
+            ForEach(unit.presets, id: \.self) { preset in
+                let selected = amount == preset
+                Button {
+                    amount = preset
+                    amountFocused = false
+                } label: {
+                    Text(preset.formatted(.number.precision(.fractionLength(0...1))))
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+                        .frame(maxWidth: .infinity, minHeight: 36)
+                        .background(
+                            selected ? EnzoPalette.accent : EnzoPalette.controlFill,
+                            in: Capsule()
+                        )
+                        .foregroundStyle(selected ? EnzoPalette.onAccent : EnzoPalette.ink)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(preset.formatted()) \(unit.symbol)")
+            }
+        }
+        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 12, trailing: 16))
+    }
+
     private var title: String { draft.eventID == nil ? "Log feed" : "Edit feed" }
 
     private func save() {
+        guard let amount, amount > 0 else { return }
+        var saved = draft
+        saved.amountMl = unit.ml(from: amount)
         Task {
-            await model.saveFeed(draft)
+            await model.saveFeed(saved)
             dismiss()
         }
     }
@@ -105,9 +168,13 @@ struct DiaperEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("What was in it?") {
-                    checkbox("Pee", isOn: $draft.pee)
-                    checkbox("Poop", isOn: $draft.poop)
+                Section {
+                    HStack(spacing: 10) {
+                        tile("Pee", systemImage: "drop.fill", isOn: $draft.pee)
+                        tile("Poop", isOn: $draft.poop)
+                    }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 12, trailing: 16))
+                    .listRowBackground(Color.clear)
                 }
 
                 Section {
@@ -115,7 +182,6 @@ struct DiaperEditorView: View {
                         DatePicker("", selection: $draft.occurredAt)
                             .labelsHidden()
                     }
-                    TextField("Optional note", text: $draft.notes, axis: .vertical)
                 }
 
 
@@ -161,118 +227,865 @@ struct DiaperEditorView: View {
         }
     }
 
-    private func checkbox(
+    /// Large toggle tile. Uses the SF Symbol when given, otherwise the diaper glyph.
+    private func tile(
         _ title: String,
+        systemImage: String? = nil,
         isOn: Binding<Bool>
     ) -> some View {
-        Button {
-            isOn.wrappedValue.toggle()
+        let selected = isOn.wrappedValue
+        return Button {
+            withAnimation(.easeOut(duration: 0.15)) { isOn.wrappedValue.toggle() }
         } label: {
-            HStack {
-                DiaperGlyph()
-                    .foregroundStyle(EnzoPalette.accent)
-                Text(title)
-                Spacer()
-                Image(systemName: isOn.wrappedValue ? "checkmark.square.fill" : "square")
-                    .font(.title3)
+            VStack(spacing: 10) {
+                Group {
+                    if let systemImage {
+                        Image(systemName: systemImage)
+                    } else {
+                        DiaperGlyph(size: 30)
+                    }
+                }
+                .font(.system(size: 30, weight: .semibold))
+                .frame(height: 34)
+
+                HStack(spacing: 5) {
+                    Text(title)
+                        .font(.headline)
+                    if selected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.subheadline.weight(.bold))
+                    }
+                }
             }
-            .contentShape(.rect)
+            .frame(maxWidth: .infinity, minHeight: 112)
+            .foregroundStyle(selected ? EnzoPalette.onAccent : EnzoPalette.accent)
+            .background(
+                selected ? EnzoPalette.accent : EnzoPalette.accentSoft,
+                in: .rect(cornerRadius: 20)
+            )
+            .contentShape(.rect(cornerRadius: 20))
         }
         .buttonStyle(.plain)
-        .accessibilityValue(isOn.wrappedValue ? "Selected" : "Not selected")
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
 struct ProfileSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
-    @State private var weightDraft: WeightUpdateDraft?
+    @State private var birthDraft: Date
+    @State private var checkupRoute: CheckupRoute?
+    @State private var leadDraft = ""
+    @FocusState private var leadFocused: Bool
+
+    init(model: AppModel) {
+        self.model = model
+        _birthDraft = State(initialValue: model.birthDate)
+    }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    DatePicker(
-                        "Birthday",
-                        selection: $model.birthDate,
-                        in: ...Date.now,
-                        displayedComponents: .date
-                    )
-
-                    LabeledContent("Current weight") {
-                        Text(weightDescription)
-                            .foregroundStyle(model.currentWeightKg == nil ? .secondary : .primary)
-                    }
-
-                    if let updatedAt = model.weightUpdatedAt {
-                        LabeledContent("Updated") {
-                            Text(updatedAt.formatted(date: .abbreviated, time: .shortened))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Button {
-                        weightDraft = WeightUpdateDraft(currentKg: model.currentWeightKg)
-                    } label: {
-                        Label("Update current weight", systemImage: "scalemass.fill")
-                    }
-                } header: {
-                    Text("Enzo")
-                } footer: {
-                    Text("Weight is used for the general daily milk reference. During the first week, the app tracks volume without judging pace.")
-                }
+                profileSection
+                checkupsSection
+                volumeSection
+                alarmsSection
             }
             .scrollContentBackground(.hidden)
             .background(EnzoPalette.canvas)
+            .foregroundStyle(EnzoPalette.ink)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done") {
+                        commitLeadDraft()
+                        dismiss()
+                    }
                 }
             }
-            .sheet(item: $weightDraft) { draft in
-                WeightEditorView(model: model, initialWeightKg: draft.currentKg)
-                    .presentationDetents([.medium])
-                    .presentationDragIndicator(.visible)
+            .sheet(item: $checkupRoute) { route in
+                CheckupEditorView(
+                    model: model,
+                    checkup: route.checkup,
+                    isNew: route.isNew
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(.regularMaterial)
+            }
+            .onAppear {
+                leadDraft = String(model.alarmLeadMinutes)
+            }
+            .onChange(of: model.alarmLeadMinutes) { _, minutes in
+                guard !leadFocused else { return }
+                leadDraft = String(minutes)
+            }
+            .onChange(of: leadFocused) { _, focused in
+                guard !focused else { return }
+                commitLeadDraft()
+            }
+        }
+        .tint(EnzoPalette.accent)
+    }
+
+    private var profileSection: some View {
+        Section {
+            DatePicker(
+                "Born",
+                selection: $birthDraft,
+                in: ...Date.now,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+
+            LabeledContent("Day of life") {
+                Text("Day \(EnzoProfile(birthDate: birthDraft).dayOfLife())")
+                    .foregroundStyle(EnzoPalette.muted)
+            }
+
+            if birthDraft != model.birthDate {
+                Button {
+                    Task { await model.saveBirthDate(birthDraft) }
+                } label: {
+                    Label("Save birthday", systemImage: "checkmark.circle.fill")
+                }
+                .disabled(model.isBusy)
+            }
+        } header: {
+            Text("Profile")
+        }
+    }
+
+    private var checkupsSection: some View {
+        Section {
+            if checkups.isEmpty {
+                ContentUnavailableView(
+                    "No checkups yet",
+                    systemImage: "stethoscope",
+                    description: Text("Add a visit to record weight or a clinician’s instructions.")
+                )
+            } else {
+                ForEach(checkups) { checkup in
+                    Button {
+                        checkupRoute = .edit(checkup)
+                    } label: {
+                        checkupRow(checkup)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Button {
+                checkupRoute = .add(Checkup.new())
+            } label: {
+                Label("Add checkup", systemImage: "plus.circle.fill")
+            }
+        } header: {
+            Text("Checkups")
+        } footer: {
+            Text("The latest completed checkup supplies weight and any clinician-set goals.")
+        }
+    }
+
+    private var volumeSection: some View {
+        Section("Volume") {
+            Picker("Display unit", selection: $model.volumeUnit) {
+                ForEach(VolumeUnit.allCases) { unit in
+                    Text(unit.label).tag(unit)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    private var alarmsSection: some View {
+        Section {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: alarmStatus.symbol)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(alarmStatus.color)
+                    .frame(width: 36, height: 36)
+                    .background(alarmStatus.color.opacity(0.12), in: Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(alarmStatus.title)
+                        .font(.subheadline.weight(.semibold))
+                    Text(alarmStatus.detail)
+                        .font(.caption)
+                        .foregroundStyle(EnzoPalette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.vertical, 2)
+
+            LabeledContent("Alarm before due") {
+                HStack(spacing: 6) {
+                    TextField("0", text: $leadDraft)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 54)
+                        .focused($leadFocused)
+                        .accessibilityLabel("Minutes before feed due")
+                    Text("min")
+                        .foregroundStyle(EnzoPalette.muted)
+                }
+            }
+
+            Stepper(value: leadStepperBinding, in: AlarmTriggerCalculator.leadRange) {
+                Text(AlarmLeadFormatting.label(for: model.alarmLeadMinutes))
+            }
+            .accessibilityHint("Adjusts when the feed alarm fires before the due time")
+
+            if let alarmWarning = model.alarmWarning {
+                Text(alarmWarning)
+                    .font(.caption)
+                    .foregroundStyle(EnzoPalette.attention)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if alarmPermissionDenied {
+                    Button {
+                        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                        UIApplication.shared.open(url)
+                    } label: {
+                        Label("Open iPhone Settings", systemImage: "gearshape.fill")
+                    }
+                }
+            }
+
+            Button {
+                Task { await model.testAlarm() }
+            } label: {
+                Label("Test alarm in 10 seconds", systemImage: "alarm.waves.left.and.right")
+            }
+            .disabled(model.isBusy)
+
+            if let message = model.alarmTestMessage {
+                Label(message, systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(EnzoPalette.success)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } header: {
+            Text("Alarms")
+        } footer: {
+            Text("This setting stays on this iPhone. Finish editing minutes or use the stepper to reschedule; the test verifies permission, sound, and the system alarm screen.")
+        }
+    }
+
+    private var leadStepperBinding: Binding<Int> {
+        Binding(
+            get: { model.alarmLeadMinutes },
+            set: { newValue in
+                leadDraft = String(newValue)
+                Task { await model.setAlarmLeadMinutes(newValue) }
+            }
+        )
+    }
+
+    private func commitLeadDraft() {
+        let parsed = Int(leadDraft.trimmingCharacters(in: .whitespacesAndNewlines))
+            ?? model.alarmLeadMinutes
+        let clamped = AlarmLeadFormatting.clamp(parsed)
+        leadDraft = String(clamped)
+        Task { await model.setAlarmLeadMinutes(clamped) }
+    }
+
+    private var checkups: [Checkup] {
+        (model.state?.checkups ?? []).sorted { $0.occurredAt > $1.occurredAt }
+    }
+
+    private func checkupRow(_ checkup: Checkup) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "stethoscope")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(EnzoPalette.accent)
+                .frame(width: 34, height: 34)
+                .background(EnzoPalette.accentSoft, in: Circle())
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 8) {
+                    Text(checkup.occurredAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(.subheadline.weight(.semibold))
+
+                    if checkup.id == model.state?.activeCheckupId {
+                        Text("ACTIVE")
+                            .font(.caption2.weight(.bold))
+                            .tracking(0.7)
+                            .foregroundStyle(EnzoPalette.success)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(EnzoPalette.success.opacity(0.12), in: Capsule())
+                    }
+                }
+
+                Text(checkupSummary(checkup))
+                    .font(.caption)
+                    .foregroundStyle(EnzoPalette.muted)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(EnzoPalette.muted.opacity(0.7))
+                .padding(.top, 10)
+        }
+        .padding(.vertical, 4)
+        .contentShape(.rect)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Opens this checkup for editing")
+    }
+
+    private func checkupSummary(_ checkup: Checkup) -> String {
+        var parts: [String] = []
+        if let weightKg = checkup.weightKg {
+            parts.append(WeightFormat.display(weightKg))
+        }
+        if checkup.hasOverrides {
+            parts.append("Clinician goals")
+        }
+        if !checkup.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            parts.append("Notes")
+        }
+        return parts.isEmpty ? "No measurements or instructions" : parts.joined(separator: " · ")
+    }
+
+    private var alarmPermissionDenied: Bool {
+        guard let warning = model.alarmWarning?.lowercased() else { return false }
+        return warning.contains("permission")
+            || warning.contains("denied")
+            || warning.contains("enable alarms")
+    }
+
+    private var alarmStatus: (title: String, detail: String, symbol: String, color: Color) {
+        if model.alarmWarning != nil {
+            return (
+                "Needs attention",
+                "Enzo could not schedule the feed alarm.",
+                "exclamationmark.triangle.fill",
+                EnzoPalette.attention
+            )
+        }
+        if let nextFeedAt = model.state?.nextFeedAt,
+           let trigger = model.feedAlarmTrigger() {
+            let lead = model.alarmLeadMinutes == 0
+                ? "at feed time"
+                : "\(model.alarmLeadMinutes) min before feed"
+            return (
+                "Scheduled",
+                "\(trigger.formatted(date: .omitted, time: .shortened)), \(lead). Feed due \(nextFeedAt.formatted(date: .omitted, time: .shortened)).",
+                "alarm.fill",
+                EnzoPalette.success
+            )
+        }
+        return (
+            "Waiting",
+            "Log a feed with its alarm enabled to schedule the next alarm.",
+            "clock.fill",
+            EnzoPalette.muted
+        )
+    }
+}
+
+private enum CheckupRoute: Identifiable {
+    case add(Checkup)
+    case edit(Checkup)
+
+    var id: String {
+        switch self {
+        case .add(let checkup): "add-\(checkup.id)"
+        case .edit(let checkup): "edit-\(checkup.id)"
+        }
+    }
+
+    var checkup: Checkup {
+        switch self {
+        case .add(let checkup), .edit(let checkup): checkup
+        }
+    }
+
+    var isNew: Bool {
+        if case .add = self { return true }
+        return false
+    }
+}
+
+private enum WeightFormat {
+    static let poundsPerKilogram = 2.204_622_621_8
+
+    enum Unit: String, CaseIterable, Identifiable {
+        case imperial = "lb + oz"
+        case metric = "kg"
+
+        var id: String { rawValue }
+    }
+
+    static func display(_ kilograms: Double) -> String {
+        let components = imperialComponents(kilograms)
+        let ounces = components.ounces.formatted(
+            .number.precision(.fractionLength(0...1))
+        )
+        return "\(components.pounds) lb \(ounces) oz"
+    }
+
+    static func imperialComponents(_ kilograms: Double) -> (pounds: Int, ounces: Double) {
+        let totalPounds = kilograms * poundsPerKilogram
+        let pounds = Int(totalPounds.rounded(.down))
+        return (pounds, (totalPounds - Double(pounds)) * 16)
+    }
+
+    static func kilograms(pounds: Int, ounces: Double) -> Double {
+        (Double(pounds) + ounces / 16) / poundsPerKilogram
+    }
+}
+
+struct CheckupEditorView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let isNew: Bool
+
+    @State private var draft: Checkup
+    @State private var weightUnit: WeightFormat.Unit = .imperial
+    @State private var pounds: Int?
+    @State private var ounces: Double?
+    @State private var kilograms: Double?
+    @State private var bottleAmount: Double?
+    @State private var milkMinimum: Double?
+    @State private var milkMaximum: Double?
+    @State private var confirmsDeletion = false
+
+    init(model: AppModel, checkup: Checkup, isNew: Bool) {
+        self.model = model
+        self.isNew = isNew
+        _draft = State(initialValue: checkup)
+
+        if let kilograms = checkup.weightKg {
+            let components = WeightFormat.imperialComponents(kilograms)
+            _pounds = State(initialValue: components.pounds)
+            _ounces = State(initialValue: components.ounces)
+            _kilograms = State(initialValue: kilograms)
+        } else {
+            _pounds = State(initialValue: nil)
+            _ounces = State(initialValue: nil)
+            _kilograms = State(initialValue: nil)
+        }
+
+        _bottleAmount = State(
+            initialValue: checkup.bottleMl.map(model.volumeUnit.value(fromMl:))
+        )
+        _milkMinimum = State(
+            initialValue: checkup.milkMlMin.map(model.volumeUnit.value(fromMl:))
+        )
+        _milkMaximum = State(
+            initialValue: checkup.milkMlMax.map(model.volumeUnit.value(fromMl:))
+        )
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                visitSection
+                weightSection
+                instructionsSection
+                notesSection
+
+                if !isNew {
+                    Section {
+                        Button("Delete checkup", role: .destructive) {
+                            confirmsDeletion = true
+                        }
+                        .disabled(model.isBusy)
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(EnzoPalette.canvas)
+            .foregroundStyle(EnzoPalette.ink)
+            .navigationTitle(isNew ? "Add checkup" : "Edit checkup")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { save() }
+                        .disabled(validationMessage != nil || model.isBusy)
+                }
+            }
+            .confirmationDialog(
+                "Delete this checkup?",
+                isPresented: $confirmsDeletion,
+                titleVisibility: .visible
+            ) {
+                Button("Delete checkup", role: .destructive) { deleteCheckup() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Later checkups will continue to determine today’s goals.")
+            }
+            .onChange(of: weightUnit) { oldUnit, newUnit in
+                convertWeight(from: oldUnit, to: newUnit)
+            }
+        }
+        .tint(EnzoPalette.accent)
+    }
+
+    private var visitSection: some View {
+        Section("Visit") {
+            DatePicker(
+                "Date and time",
+                selection: $draft.occurredAt,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+        }
+    }
+
+    private var weightSection: some View {
+        Section {
+            Picker("Weight unit", selection: $weightUnit) {
+                ForEach(WeightFormat.Unit.allCases) { unit in
+                    Text(unit.rawValue).tag(unit)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            if weightUnit == .imperial {
+                LabeledContent("Weight") {
+                    HStack(spacing: 7) {
+                        TextField("—", value: $pounds, format: .number)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 48)
+                        Text("lb")
+                            .foregroundStyle(EnzoPalette.muted)
+                        TextField(
+                            "—",
+                            value: $ounces,
+                            format: .number.precision(.fractionLength(0...1))
+                        )
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 52)
+                        Text("oz")
+                            .foregroundStyle(EnzoPalette.muted)
+                    }
+                }
+            } else {
+                LabeledContent("Weight") {
+                    HStack(spacing: 7) {
+                        TextField(
+                            "—",
+                            value: $kilograms,
+                            format: .number.precision(.fractionLength(0...2))
+                        )
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 84)
+                        Text("kg")
+                            .foregroundStyle(EnzoPalette.muted)
+                    }
+                }
+            }
+
+            if let weightError {
+                Text(weightError)
+                    .font(.caption)
+                    .foregroundStyle(EnzoPalette.attention)
+            }
+        } header: {
+            Text("Measurement")
+        } footer: {
+            Text("Weight is optional and is used to calculate general milk guidance.")
+        }
+    }
+
+    private var instructionsSection: some View {
+        Section {
+            optionalDoubleField(
+                "Each bottle",
+                value: $bottleAmount,
+                suffix: model.volumeUnit.symbol
+            )
+
+            optionalIntField(
+                "Feed interval",
+                value: $draft.feedIntervalMinutes,
+                suffix: "min"
+            )
+
+            LabeledContent("Feeds per day") {
+                integerRangeFields(
+                    minimum: $draft.feedsMin,
+                    maximum: $draft.feedsMax,
+                    suffix: ""
+                )
+            }
+
+            LabeledContent("Milk per day") {
+                decimalRangeFields(
+                    minimum: $milkMinimum,
+                    maximum: $milkMaximum,
+                    suffix: model.volumeUnit.symbol
+                )
+            }
+
+            optionalIntField("Pee per day", value: $draft.peeMin, suffix: "min")
+            optionalIntField("Poop per day", value: $draft.poopMin, suffix: "min")
+
+            if let instructionsError {
+                Text(instructionsError)
+                    .font(.caption)
+                    .foregroundStyle(EnzoPalette.attention)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } header: {
+            Text("Doctor’s instructions")
+        } footer: {
+            Text("Leave any field blank to use Guidance. A single end of a range is allowed; Enzo will use it as the closest complete range.")
+        }
+    }
+
+    private var notesSection: some View {
+        Section("Notes") {
+            TextField("Optional visit notes", text: $draft.notes, axis: .vertical)
+                .lineLimit(3...7)
+        }
+    }
+
+    private func optionalIntField(
+        _ title: String,
+        value: Binding<Int?>,
+        suffix: String
+    ) -> some View {
+        LabeledContent(title) {
+            HStack(spacing: 7) {
+                TextField("Guidance", value: value, format: .number)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 92)
+                Text(suffix)
+                    .foregroundStyle(EnzoPalette.muted)
             }
         }
     }
 
-    private var weightDescription: String {
-        guard let kilograms = model.currentWeightKg else { return "Not set" }
-        let totalPounds = kilograms * 2.204_622_621_8
-        let pounds = Int(totalPounds.rounded(.down))
-        let ounces = (totalPounds - Double(pounds)) * 16
-        return "\(pounds) lb \(ounces.formatted(.number.precision(.fractionLength(0...1)))) oz"
+    private func optionalDoubleField(
+        _ title: String,
+        value: Binding<Double?>,
+        suffix: String
+    ) -> some View {
+        LabeledContent(title) {
+            HStack(spacing: 7) {
+                TextField(
+                    "Guidance",
+                    value: value,
+                    format: .number.precision(.fractionLength(0...1))
+                )
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 92)
+                Text(suffix)
+                    .foregroundStyle(EnzoPalette.muted)
+            }
+        }
+    }
+
+    private func integerRangeFields(
+        minimum: Binding<Int?>,
+        maximum: Binding<Int?>,
+        suffix: String
+    ) -> some View {
+        HStack(spacing: 6) {
+            TextField("Min", value: minimum, format: .number)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 48)
+            Text("–")
+                .foregroundStyle(EnzoPalette.muted)
+            TextField("Max", value: maximum, format: .number)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 48)
+            if !suffix.isEmpty {
+                Text(suffix)
+                    .foregroundStyle(EnzoPalette.muted)
+            }
+        }
+    }
+
+    private func decimalRangeFields(
+        minimum: Binding<Double?>,
+        maximum: Binding<Double?>,
+        suffix: String
+    ) -> some View {
+        HStack(spacing: 6) {
+            TextField(
+                "Min",
+                value: minimum,
+                format: .number.precision(.fractionLength(0...1))
+            )
+            .keyboardType(.decimalPad)
+            .multilineTextAlignment(.trailing)
+            .frame(width: 48)
+            Text("–")
+                .foregroundStyle(EnzoPalette.muted)
+            TextField(
+                "Max",
+                value: maximum,
+                format: .number.precision(.fractionLength(0...1))
+            )
+            .keyboardType(.decimalPad)
+            .multilineTextAlignment(.trailing)
+            .frame(width: 48)
+            Text(suffix)
+                .foregroundStyle(EnzoPalette.muted)
+        }
+    }
+
+    private var weightIsBlank: Bool {
+        switch weightUnit {
+        case .imperial: pounds == nil && ounces == nil
+        case .metric: kilograms == nil
+        }
+    }
+
+    private var enteredWeightKg: Double? {
+        switch weightUnit {
+        case .imperial:
+            guard pounds != nil || ounces != nil else { return nil }
+            return WeightFormat.kilograms(
+                pounds: pounds ?? 0,
+                ounces: ounces ?? 0
+            )
+        case .metric:
+            return kilograms
+        }
+    }
+
+    private var weightError: String? {
+        guard !weightIsBlank else { return nil }
+        if weightUnit == .imperial, let ounces, !(0..<16).contains(ounces) {
+            return "Ounces must be from 0 up to 15.9."
+        }
+        guard let weight = enteredWeightKg, (0.5...30).contains(weight) else {
+            return "Enter a weight between 0.5 and 30 kg."
+        }
+        return nil
+    }
+
+    private var instructionsError: String? {
+        let positiveInts = [
+            draft.feedIntervalMinutes,
+            draft.feedsMin,
+            draft.feedsMax,
+            draft.peeMin,
+            draft.poopMin,
+        ]
+        if positiveInts.compactMap({ $0 }).contains(where: { $0 <= 0 }) {
+            return "Instruction values must be greater than zero."
+        }
+
+        let positiveVolumes = [bottleAmount, milkMinimum, milkMaximum]
+        if positiveVolumes.compactMap({ $0 }).contains(where: { $0 <= 0 }) {
+            return "Milk amounts must be greater than zero."
+        }
+
+        if let minimum = draft.feedsMin,
+           let maximum = draft.feedsMax,
+           minimum > maximum {
+            return "The minimum feeds per day cannot exceed the maximum."
+        }
+
+        if let minimum = milkMinimum,
+           let maximum = milkMaximum,
+           minimum > maximum {
+            return "The minimum daily milk cannot exceed the maximum."
+        }
+
+        return nil
+    }
+
+    private var validationMessage: String? {
+        weightError ?? instructionsError
+    }
+
+    private func convertWeight(from oldUnit: WeightFormat.Unit, to newUnit: WeightFormat.Unit) {
+        guard oldUnit != newUnit else { return }
+        switch (oldUnit, newUnit) {
+        case (.imperial, .metric):
+            guard pounds != nil || ounces != nil else {
+                kilograms = nil
+                return
+            }
+            kilograms = WeightFormat.kilograms(
+                pounds: pounds ?? 0,
+                ounces: ounces ?? 0
+            )
+        case (.metric, .imperial):
+            guard let kilograms else {
+                pounds = nil
+                ounces = nil
+                return
+            }
+            let components = WeightFormat.imperialComponents(kilograms)
+            pounds = components.pounds
+            ounces = components.ounces
+        default:
+            break
+        }
+    }
+
+    private func save() {
+        guard validationMessage == nil else { return }
+        var checkup = draft
+        checkup.weightKg = enteredWeightKg
+        checkup.bottleMl = bottleAmount.map(model.volumeUnit.ml(from:))
+        checkup.milkMlMin = milkMinimum.map(model.volumeUnit.ml(from:))
+        checkup.milkMlMax = milkMaximum.map(model.volumeUnit.ml(from:))
+
+        Task {
+            await model.saveCheckup(checkup, isNew: isNew)
+            dismiss()
+        }
+    }
+
+    private func deleteCheckup() {
+        Task {
+            await model.deleteCheckup(id: draft.id)
+            dismiss()
+        }
     }
 }
 
-struct NewbornGuideSheet: View {
+struct GoalsExplainerSheet: View {
     @Environment(\.dismiss) private var dismiss
     let profile: EnzoProfile
-    let weightKg: Double?
-    let state: ServerState?
-
-    private var day: Int { profile.dayOfLife() }
-    private var today: TodaySummary? { state?.today }
+    let goals: DailyGoals
+    let unit: VolumeUnit
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    guideHeader
-                    guidanceCard
-                    clinicianNote
-                    sourceLinks
+                VStack(alignment: .leading, spacing: 22) {
+                    intro
+                    goalsSection
+                    methodSection
+                    sourcesSection
+
+                    Text("Clinician guidance always takes priority.")
+                        .font(.caption)
+                        .foregroundStyle(EnzoPalette.muted)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 8)
-                .padding(.bottom, 28)
+                .padding(.bottom, 30)
             }
             .scrollIndicators(.hidden)
             .background(EnzoPalette.canvas)
-            .navigationTitle("Newborn guide")
+            .foregroundStyle(EnzoPalette.ink)
+            .navigationTitle("How goals are calculated")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -283,133 +1096,202 @@ struct NewbornGuideSheet: View {
         .tint(EnzoPalette.accent)
     }
 
-    private var guideHeader: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text("DAY \(day)")
+    private var intro: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("DAY \(profile.dayOfLife())")
                 .font(.caption.weight(.bold))
                 .tracking(1.3)
                 .foregroundStyle(EnzoPalette.accent)
-
-            Text("A quick read on today")
-                .font(.title2.weight(.bold))
-
-            Text("General reference for \(Date.now.formatted(.dateTime.month(.wide).day())). Enzo’s own pattern and care team matter more than any single number.")
+            Text("Checkup instructions replace only the values that were entered. Everything else follows guidance for his age and latest recorded weight.")
                 .font(.subheadline)
                 .foregroundStyle(EnzoPalette.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    private var guidanceCard: some View {
-        VStack(spacing: 0) {
-            NewbornGuideRow(
-                icon: .feeds,
-                title: "Feeds",
-                current: "\(today?.feeds ?? 0) today",
-                reference: feedReference,
-                detail: feedDetail
-            )
-            guideDivider
-            NewbornGuideRow(
-                icon: .milk,
-                title: "Milk",
-                current: "\(formatted(today?.milkMl ?? 0)) mL today",
-                reference: milkReference,
-                detail: milkDetail
-            )
-            guideDivider
-            NewbornGuideRow(
-                icon: .wet,
-                title: "Wet diapers",
-                current: "\(today?.pees ?? 0) today",
-                reference: minimumReference(DailyInsightBuilder.wetMinimumForDay(day)),
-                detail: wetDetail
-            )
-            guideDivider
-            NewbornGuideRow(
-                icon: .dirty,
-                title: "Dirty diapers",
-                current: "\(today?.poops ?? 0) today",
-                reference: minimumReference(DailyInsightBuilder.dirtyMinimumForDay(day)),
-                detail: dirtyDetail
-            )
-        }
-        .background(EnzoPalette.surface, in: .rect(cornerRadius: 22))
-    }
-
-    private var guideDivider: some View {
-        Divider()
-            .overlay(EnzoPalette.divider)
-            .padding(.leading, 62)
-    }
-
-    private var clinicianNote: some View {
-        HStack(alignment: .top, spacing: 11) {
-            Image(systemName: "cross.case.fill")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(EnzoPalette.accent)
-                .frame(width: 30, height: 30)
-                .background(EnzoPalette.accentSoft, in: Circle())
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Clinician guidance wins")
-                    .font(.subheadline.weight(.semibold))
-                Text("If Enzo is difficult to wake, feeds poorly, seems increasingly jaundiced, or his diaper output drops, contact his pediatrician or maternity team.")
-                    .font(.caption)
-                    .foregroundStyle(EnzoPalette.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(15)
-        .background(EnzoPalette.accentSoft.opacity(0.62), in: .rect(cornerRadius: 18))
-    }
-
-    private var sourceLinks: some View {
+    private var goalsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("SOURCES")
-                .font(.caption2.weight(.bold))
-                .tracking(1.2)
+            sectionLabel("CURRENT TARGETS")
+
+            VStack(spacing: 0) {
+                if let bottle = goals.bottleMl {
+                    GoalRow(
+                        title: "Each bottle",
+                        value: "About \(unit.format(range: bottle.value))",
+                        source: bottle.source,
+                        guidance: bottle.guidance.map { unit.format(range: $0) }
+                    )
+                } else {
+                    GoalRow(
+                        title: "Each bottle",
+                        value: "Needs a recorded weight",
+                        source: .guidance,
+                        guidance: nil
+                    )
+                }
+
+                Divider().overlay(EnzoPalette.divider)
+
+                GoalRow(
+                    title: "Feeds per day",
+                    value: integerRange(goals.feeds.value),
+                    source: goals.feeds.source,
+                    guidance: goals.feeds.guidance.map { integerRange($0) }
+                )
+
+                Divider().overlay(EnzoPalette.divider)
+
+                GoalRow(
+                    title: "Feed interval",
+                    value: interval(goals.feedIntervalMinutes.value),
+                    source: goals.feedIntervalMinutes.source,
+                    guidance: goals.feedIntervalMinutes.guidance.map { interval($0) }
+                )
+
+                Divider().overlay(EnzoPalette.divider)
+
+                if let milk = goals.dailyMilkMl {
+                    GoalRow(
+                        title: "Milk per day",
+                        value: unit.format(range: milk.value),
+                        source: milk.source,
+                        guidance: milk.guidance.map { unit.format(range: $0) }
+                    )
+                } else {
+                    GoalRow(
+                        title: "Milk per day",
+                        value: "Needs a recorded weight",
+                        source: .guidance,
+                        guidance: nil
+                    )
+                }
+
+                Divider().overlay(EnzoPalette.divider)
+
+                if let pee = goals.peeMin {
+                    GoalRow(
+                        title: "Pee per day",
+                        value: "\(pee.value)+",
+                        source: pee.source,
+                        guidance: pee.guidance.map { "\($0)+" }
+                    )
+                } else {
+                    GoalRow(
+                        title: "Pee per day",
+                        value: "Track his pattern",
+                        source: .guidance,
+                        guidance: nil
+                    )
+                }
+
+                Divider().overlay(EnzoPalette.divider)
+
+                if let poop = goals.poopMin {
+                    GoalRow(
+                        title: "Poop per day",
+                        value: "\(poop.value)+",
+                        source: poop.source,
+                        guidance: poop.guidance.map { "\($0)+" }
+                    )
+                } else {
+                    GoalRow(
+                        title: "Poop per day",
+                        value: "Track his pattern",
+                        source: .guidance,
+                        guidance: nil
+                    )
+                }
+            }
+            .background(EnzoPalette.surface, in: .rect(cornerRadius: 18))
+        }
+    }
+
+    private var methodSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionLabel("HOW IT WORKS")
+
+            VStack(spacing: 0) {
+                methodRow("Day of life", result: "Feed and diaper targets")
+                Divider().overlay(EnzoPalette.divider)
+                methodRow("Age + weight", result: "Daily milk target")
+                Divider().overlay(EnzoPalette.divider)
+                methodRow("Daily milk ÷ feeds", result: "Bottle range")
+                Divider().overlay(EnzoPalette.divider)
+                methodRow("Latest checkup", result: "Replaces entered targets")
+            }
+            .background(EnzoPalette.surface, in: .rect(cornerRadius: 18))
+        }
+    }
+
+    private func methodRow(_ input: String, result: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(input)
+                .font(.subheadline.weight(.semibold))
+                .frame(width: 126, alignment: .leading)
+            Text(result)
+                .font(.subheadline)
                 .foregroundStyle(EnzoPalette.muted)
-                .padding(.horizontal, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var sourcesSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionLabel("SOURCES")
 
             VStack(spacing: 0) {
                 sourceLink(
-                    "Formula: how much and how often",
+                    "Feeding frequency",
                     organization: "CDC",
                     url: "https://www.cdc.gov/infant-toddler-nutrition/formula-feeding/how-much-and-how-often.html"
                 )
-                guideDivider
+                Divider().overlay(EnzoPalette.divider)
                 sourceLink(
-                    "Amount and schedule of formula feedings",
+                    "Milk by age and weight",
+                    organization: "Safer Care Victoria",
+                    url: "https://www.safercare.vic.gov.au/best-practice-improvement/clinical-guidance/neonatal/formula-feeding"
+                )
+                Divider().overlay(EnzoPalette.divider)
+                sourceLink(
+                    "Formula amounts",
                     organization: "American Academy of Pediatrics",
-                    url: "https://www.healthychildren.org/english/ages-stages/baby/formula-feeding/pages/amount-and-schedule-of-formula-feedings.aspx"
+                    url: "https://www.healthychildren.org/English/ages-stages/baby/formula-feeding/Pages/amount-and-schedule-of-formula-feedings.aspx"
                 )
-                guideDivider
+                Divider().overlay(EnzoPalette.divider)
                 sourceLink(
-                    "Formula milk: common questions",
-                    organization: "NHS",
-                    url: "https://www.nhs.uk/baby/breastfeeding-and-bottle-feeding/bottle-feeding/formula-milk-questions/"
-                )
-                guideDivider
-                sourceLink(
-                    "Early bottle-feeding days",
+                    "Pee and poop",
                     organization: "East Lancashire NHS",
-                    url: "https://elht.nhs.uk/services/maternity-and-newborn-services/infant-feeding/early-bottle-feeding-days"
+                    url: "https://elht.nhs.uk/application/files/7017/1957/8897/E0126_Early_Bottle_Feeding_V3_Sep23_UNICEF_statement_added_2.pdf"
                 )
             }
             .background(EnzoPalette.surface, in: .rect(cornerRadius: 18))
         }
     }
 
-    private func sourceLink(_ title: String, organization: String, url: String) -> some View {
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .tracking(1.2)
+            .foregroundStyle(EnzoPalette.muted)
+            .padding(.horizontal, 4)
+    }
+
+    private func sourceLink(
+        _ title: String,
+        organization: String,
+        url: String
+    ) -> some View {
         Link(destination: URL(string: url)!) {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
+                    Text(organization)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(EnzoPalette.ink)
                         .multilineTextAlignment(.leading)
-                    Text(organization)
+                    Text(title)
                         .font(.caption)
                         .foregroundStyle(EnzoPalette.muted)
                 }
@@ -419,244 +1301,87 @@ struct NewbornGuideSheet: View {
                     .foregroundStyle(EnzoPalette.accent)
             }
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            .padding(.horizontal, 15)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
     }
 
-    private var feedReference: String {
-        let range = DailyInsightBuilder.feedRangeForDay(day)
-        return "\(formatted(range.lowerBound))–\(formatted(range.upperBound)) in 24 hours"
+    private func integerRange(_ range: ClosedRange<Int>) -> String {
+        range.lowerBound == range.upperBound
+            ? "\(range.lowerBound)"
+            : "\(range.lowerBound)–\(range.upperBound)"
     }
 
-    private var feedDetail: String {
-        day <= 7
-            ? "In the first days, most formula-fed newborns eat every 2–3 hours. Follow hunger and fullness cues."
-            : "Timing and appetite vary. Follow hunger and fullness cues and Enzo’s clinician guidance."
-    }
-
-    private var milkReference: String {
-        if day <= 7 { return "Often 30–60 mL per feed" }
-        guard let range = DailyInsightBuilder.dailyMilkReference(weightKg: weightKg) else {
-            return "Add weight in Settings"
+    private func interval(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if remainder == 0 {
+            return hours == 1 ? "Every hour" : "Every \(hours) hours"
         }
-        return "About \(formatted(range.lowerBound))–\(formatted(range.upperBound)) mL per day"
-    }
-
-    private var milkDetail: String {
-        day <= 7
-            ? "Early bottle sizes are a loose reference, not a quota. The app does not score daily milk pace during the first week."
-            : "The weight-based daily range is a general reference. Appetite can vary from feed to feed."
-    }
-
-    private var wetDetail: String {
-        switch day {
-        case 1: "At least one wet diaper is a common day-one reference."
-        case 2: "Wet diapers should begin increasing as feeding becomes established."
-        case 3...4: "Urine output should keep increasing; diapers should feel heavier."
-        default: "After the first several days, around six wet diapers a day is a common reference."
+        if hours == 0 {
+            return "Every \(minutes) minutes"
         }
-    }
-
-    private var dirtyDetail: String {
-        day <= 4
-            ? "At least one stool is a common early reference, with color changing from dark meconium over the first days."
-            : "Stool frequency varies. A change from Enzo’s established pattern matters more than a single count."
-    }
-
-    private func minimumReference(_ minimum: Int?) -> String {
-        minimum.map { "\($0)+ in 24 hours" } ?? "No simple daily target"
-    }
-
-    private func formatted(_ value: Double) -> String {
-        value.rounded() == value
-            ? String(Int(value))
-            : value.formatted(.number.precision(.fractionLength(1)))
+        return "Every \(hours) hr \(remainder) min"
     }
 }
 
-private struct NewbornGuideRow: View {
-    enum Icon {
-        case feeds
-        case milk
-        case wet
-        case dirty
-    }
-
-    let icon: Icon
+private struct GoalRow: View {
     let title: String
-    let current: String
-    let reference: String
-    let detail: String
+    let value: String
+    let source: GoalSource
+    let guidance: String?
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            glyph
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(EnzoPalette.accent)
-                .frame(width: 34, height: 34)
-                .background(EnzoPalette.accentSoft, in: Circle())
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(EnzoPalette.muted)
+                .padding(.top, 2)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                    Spacer(minLength: 8)
-                    Text(current)
-                        .font(.caption.weight(.medium))
-                        .monospacedDigit()
-                        .foregroundStyle(EnzoPalette.muted)
-                }
+            Spacer(minLength: 12)
 
-                Text(reference)
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(value)
                     .font(.body.weight(.semibold))
                     .foregroundStyle(EnzoPalette.ink)
+                    .monospacedDigit()
+                    .multilineTextAlignment(.trailing)
 
-                Text(detail)
+                Text(sourceLine)
                     .font(.caption)
-                    .foregroundStyle(EnzoPalette.muted)
+                    .foregroundStyle(source.isClinician ? EnzoPalette.accent : EnzoPalette.muted)
+                    .multilineTextAlignment(.trailing)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(15)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
         .accessibilityElement(children: .combine)
     }
 
-    @ViewBuilder
-    private var glyph: some View {
-        switch icon {
-        case .feeds:
-            Image(systemName: "repeat.circle.fill")
-        case .milk:
-            BabyBottleGlyph(size: 17)
-        case .wet:
-            Image(systemName: "drop.fill")
-        case .dirty:
-            DiaperGlyph(size: 17)
+    private var sourceLine: String {
+        let provenance: String
+        switch source {
+        case .guidance:
+            provenance = "Guidance"
+        case .checkup(let checkup):
+            provenance = "Checkup · \(checkup.occurredAt.formatted(.dateTime.month(.abbreviated).day()))"
         }
+
+        guard let guidance else { return provenance }
+        return "\(provenance) · Guidance \(guidance)"
     }
 }
 
-private struct WeightUpdateDraft: Identifiable {
-    let id = UUID()
-    let currentKg: Double?
-}
-
-private struct WeightEditorView: View {
-    enum Unit: String, CaseIterable, Identifiable {
-        case imperial = "lb + oz"
-        case metric = "kg"
-
-        var id: String { rawValue }
+enum AlarmLeadFormatting {
+    static func label(for minutes: Int) -> String {
+        minutes == 0 ? "At due time" : "\(minutes) min before due"
     }
 
-    @Environment(\.dismiss) private var dismiss
-    let model: AppModel
-    @State private var unit: Unit
-    @State private var pounds: Int?
-    @State private var ounces: Double?
-    @State private var kilograms: Double?
-    @FocusState private var focusedField: Field?
-
-    private enum Field { case pounds, ounces, kilograms }
-
-    init(model: AppModel, initialWeightKg: Double?) {
-        self.model = model
-        _unit = State(initialValue: .imperial)
-
-        if let initialWeightKg {
-            let totalPounds = initialWeightKg * 2.204_622_621_8
-            let wholePounds = Int(totalPounds.rounded(.down))
-            _pounds = State(initialValue: wholePounds)
-            _ounces = State(initialValue: (totalPounds - Double(wholePounds)) * 16)
-            _kilograms = State(initialValue: initialWeightKg)
-        } else {
-            _pounds = State(initialValue: nil)
-            _ounces = State(initialValue: nil)
-            _kilograms = State(initialValue: nil)
-        }
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Picker("Unit", selection: $unit) {
-                        ForEach(Unit.allCases) { unit in
-                            Text(unit.rawValue).tag(unit)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    if unit == .imperial {
-                        LabeledContent("Weight") {
-                            HStack(spacing: 8) {
-                                TextField("0", value: $pounds, format: .number)
-                                    .focused($focusedField, equals: .pounds)
-                                    .frame(width: 54)
-                                Text("lb").foregroundStyle(.secondary)
-                                TextField("0", value: $ounces, format: .number.precision(.fractionLength(0...1)))
-                                    .focused($focusedField, equals: .ounces)
-                                    .frame(width: 54)
-                                Text("oz").foregroundStyle(.secondary)
-                            }
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                        }
-                    } else {
-                        LabeledContent("Weight") {
-                            HStack(spacing: 8) {
-                                TextField("0", value: $kilograms, format: .number.precision(.fractionLength(0...2)))
-                                    .focused($focusedField, equals: .kilograms)
-                                    .frame(width: 90)
-                                Text("kg").foregroundStyle(.secondary)
-                            }
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                        }
-                    }
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(EnzoPalette.canvas)
-            .navigationTitle("Current weight")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .disabled(enteredKilograms == nil)
-                }
-            }
-            .task {
-                focusedField = unit == .imperial ? .pounds : .kilograms
-            }
-            .onChange(of: unit) { _, newUnit in
-                focusedField = newUnit == .imperial ? .pounds : .kilograms
-            }
-        }
-    }
-
-    private var enteredKilograms: Double? {
-        let value: Double?
-        switch unit {
-        case .imperial:
-            guard let pounds else { return nil }
-            value = (Double(pounds) + (ounces ?? 0) / 16) / 2.204_622_621_8
-        case .metric:
-            value = kilograms
-        }
-        guard let value, (0.5...30).contains(value) else { return nil }
-        return value
-    }
-
-    private func save() {
-        guard let enteredKilograms else { return }
-        model.updateCurrentWeight(kilograms: enteredKilograms)
-        dismiss()
+    static func clamp(_ minutes: Int) -> Int {
+        Swift.min(Swift.max(minutes, AlarmTriggerCalculator.leadRange.lowerBound), AlarmTriggerCalculator.leadRange.upperBound)
     }
 }

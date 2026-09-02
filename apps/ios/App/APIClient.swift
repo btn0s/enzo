@@ -6,11 +6,7 @@ struct APIClient {
            let url = URL(string: override) {
             return url
         }
-#if targetEnvironment(simulator)
-        return URL(string: "http://127.0.0.1:4318")!
-#else
-        return URL(string: "https://devbook.tail24b669.ts.net:8443")!
-#endif
+        return URL(string: "https://enzo-api.btn0s.workers.dev")!
     }
 
     private let decoder: JSONDecoder = {
@@ -129,6 +125,23 @@ struct APIClient {
         )
     }
 
+    func updateProfile(birthAt: Date) async throws -> MutationResponse {
+        struct Body: Encodable { let birthAt: Date }
+        return try await request(path: "/api/profile", method: "PUT", body: Body(birthAt: birthAt))
+    }
+
+    func createCheckup(_ checkup: Checkup) async throws -> MutationResponse {
+        try await request(path: "/api/checkups", method: "POST", body: checkup)
+    }
+
+    func updateCheckup(_ checkup: Checkup) async throws -> MutationResponse {
+        try await request(path: "/api/checkups/\(checkup.id)", method: "PATCH", body: checkup)
+    }
+
+    func deleteCheckup(id: String) async throws -> MutationResponse {
+        try await request(path: "/api/checkups/\(id)", method: "DELETE")
+    }
+
     func deleteEvent(id: String) async throws -> MutationResponse {
         try await request(path: "/api/events/\(id)", method: "DELETE")
     }
@@ -139,6 +152,7 @@ struct APIClient {
     ) async throws -> Response {
         var request = URLRequest(url: baseURL.appending(path: path))
         request.httpMethod = method
+        request.setValue("Bearer \(EnzoSecrets.apiToken)", forHTTPHeaderField: "Authorization")
         return try await perform(request)
     }
 
@@ -149,6 +163,7 @@ struct APIClient {
     ) async throws -> Response {
         var request = URLRequest(url: baseURL.appending(path: path))
         request.httpMethod = method
+        request.setValue("Bearer \(EnzoSecrets.apiToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try encoder.encode(body)
         return try await perform(request)

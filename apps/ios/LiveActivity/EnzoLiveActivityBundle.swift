@@ -5,5 +5,6 @@ import WidgetKit
 struct EnzoLiveActivityBundle: WidgetBundle {
     var body: some Widget {
         FeedLiveActivity()
+        EnzoTodayWidget()
     }
 }

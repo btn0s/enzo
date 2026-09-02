@@ -16,25 +16,23 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>enzo</string>
-			</array>
-		</dict>
-	</array>
 	<key>CFBundleVersion</key>
-	<string>1</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Hold the talk button to dictate a feed or diaper event.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Turn short care commands into editable Enzo tracker events.</string>
+	<string>2026.9.2</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>Enzo schedules a full-screen alarm when the next feed is due.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+		<key>UIImageName</key>
+		<string>LaunchMark</string>
+		<key>UIImageRespectsSafeAreaInsets</key>
+		<true/>
+	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
