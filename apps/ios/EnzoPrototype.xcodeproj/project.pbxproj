@@ -7,30 +7,40 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00E077A364FDFE906BA4462C /* WidgetRemoteUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7904EA0A295B4028DA4A92D /* WidgetRemoteUpdates.swift */; };
 		193B434860B25927BC87BBA2 /* Secrets.example.swift in Sources */ = {isa = PBXBuildFile; fileRef = 067E19C667CFC5F5D28C6496 /* Secrets.example.swift */; };
 		1E11C2CCCCCA24437B609CC4 /* EnzoTodayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE5E98FC58FD0162CB41272E /* EnzoTodayWidget.swift */; };
+		21C9F9574714A8EF2BE50BA5 /* EnzoClassicAlarm.wav in Resources */ = {isa = PBXBuildFile; fileRef = 2486A30B26551C82693941FD /* EnzoClassicAlarm.wav */; };
 		2E699701855F41E072C885D6 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C725851A0AAD78657BE9CC /* APIClient.swift */; };
 		3C84FC3FC98D80AF6BFCE611 /* ActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003FBBFE605F96C77F183146 /* ActivityService.swift */; };
 		3F2C58A25F158A861C0804F7 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ACE61A169550810BB7DC844 /* WidgetSnapshot.swift */; };
 		4350346BD906E426FA411B19 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ACE61A169550810BB7DC844 /* WidgetSnapshot.swift */; };
+		47ACBE990F07944CFC82D99B /* AlarmAcknowledgement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3157405981CAC2AB2B41AF74 /* AlarmAcknowledgement.swift */; };
 		5040F5440AA668C42C21C1EE /* RemoteNotificationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406945131D2A36B7ECC3CDAA /* RemoteNotificationDelegate.swift */; };
 		526359FFF0D785EEB4ACAEE5 /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A267EA981CA419A55629D0F0 /* Secrets.swift */; };
 		536DBB9DC9339D5D1EE22812 /* AlarmReconciliationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CB3464049165C3CEF2FE893 /* AlarmReconciliationPolicyTests.swift */; };
 		592624D40DA85A3A4366EC78 /* DailyReferenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A8C1AF1F87371C8EA162A6 /* DailyReferenceTests.swift */; };
 		69D0FB48C0312DFB8484E36D /* AlarmReconciliationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 658791B3A533E9E7F53B9DD0 /* AlarmReconciliationPolicy.swift */; };
 		6AB864C85533946721D51714 /* EnzoLiveActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2319649500C3DE8D6F41649 /* EnzoLiveActivityBundle.swift */; };
+		88F983E545C7071B2EB28082 /* WidgetSnapshotRefreshTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C8ECF0F71867EA6CCB33427 /* WidgetSnapshotRefreshTests.swift */; };
+		8AB109AA059E3C4871DC3A75 /* FeedAlarmSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FCBB7C5DDA352AD5B96501C /* FeedAlarmSettingsTests.swift */; };
 		93522CC73569F41CAEDFCD90 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB4A47335A74F68062554F90 /* Models.swift */; };
 		94A605C5F6A020974F034E7B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5728876A6A1D4311ABA3AE /* ContentView.swift */; };
 		9DE61F6320F808717320A826 /* LiveActivityReconciliationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 344440705FA51B09CAB776A1 /* LiveActivityReconciliationPolicy.swift */; };
+		AC258262531902CA478AE6CD /* EnzoBell.wav in Resources */ = {isa = PBXBuildFile; fileRef = 423D8246816F710755DF1157 /* EnzoBell.wav */; };
 		AF66371B62CDB1EA283CC585 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 084F5D344F5145DDC217A0FE /* AppModel.swift */; };
+		B129472D72DC8C58E3FDCCA9 /* EnzoGentleChime.wav in Resources */ = {isa = PBXBuildFile; fileRef = 86CAE424A0634BC06CB03AA5 /* EnzoGentleChime.wav */; };
 		B3FDFBC53ACB0EE7999CFD52 /* FeedActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6632FF24E498D1DCBBC3D6 /* FeedActivityAttributes.swift */; };
 		B7955FD7B1704B456E794590 /* FeedLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E81852D6032E666B9F5FBE9 /* FeedLiveActivity.swift */; };
 		B92E780A11FD49AACE720163 /* AlarmTriggerCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB18FB20894BA2C6253D26D /* AlarmTriggerCalculator.swift */; };
 		BC4D744E39212B15F9DCF1EC /* FeedActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6632FF24E498D1DCBBC3D6 /* FeedActivityAttributes.swift */; };
 		BC70FC6B7BF72536EE82C2CB /* DailyInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CAD0B4790022A9058C69E15 /* DailyInsights.swift */; };
 		C23E237D68CEDFE97E985D3B /* AlarmService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B61593BCAD91AB858B98C3 /* AlarmService.swift */; };
+		C26E5BCE88C693A5B28FE589 /* WidgetRemoteUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7904EA0A295B4028DA4A92D /* WidgetRemoteUpdates.swift */; };
 		C2B30C36C42F9136675EE003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9F3952F9D80AD3C2974B203B /* Assets.xcassets */; };
 		D05AEF6DC6D3D57A6AAA9FD3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 39341FC934A61DD7BF70E0CD /* Assets.xcassets */; };
+		D6537FE4669649C28A94D169 /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A267EA981CA419A55629D0F0 /* Secrets.swift */; };
+		D71C4D5BAAC030B23528136B /* EnzoBrightChime.wav in Resources */ = {isa = PBXBuildFile; fileRef = 97D844700A139ED004136B8B /* EnzoBrightChime.wav */; };
 		DCCE2F5C6CC6228AAB830C67 /* AlarmTriggerCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607AB0175AB44F95DD076EFE /* AlarmTriggerCalculatorTests.swift */; };
 		E51B5AF7C7D8A7E56937D6E8 /* VolumeUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB856CF1FBD7B755AFFD689D /* VolumeUnit.swift */; };
 		E78BADE5A235DD12A379B594 /* EditorViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 184DE56E7A58FFE522398303 /* EditorViews.swift */; };
@@ -81,23 +91,31 @@
 		184DE56E7A58FFE522398303 /* EditorViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViews.swift; sourceTree = "<group>"; };
 		1CBA813AEAFB10F73EB43516 /* EnzoPrototypeTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = EnzoPrototypeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2345923975017BED12B66F11 /* EnzoLiveActivity.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EnzoLiveActivity.entitlements; sourceTree = "<group>"; };
+		2486A30B26551C82693941FD /* EnzoClassicAlarm.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = EnzoClassicAlarm.wav; sourceTree = "<group>"; };
 		2AB18FB20894BA2C6253D26D /* AlarmTriggerCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmTriggerCalculator.swift; sourceTree = "<group>"; };
 		2CAD0B4790022A9058C69E15 /* DailyInsights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyInsights.swift; sourceTree = "<group>"; };
 		2D4D9F3F4EBED43002B6FFED /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		3157405981CAC2AB2B41AF74 /* AlarmAcknowledgement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmAcknowledgement.swift; sourceTree = "<group>"; };
 		344440705FA51B09CAB776A1 /* LiveActivityReconciliationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityReconciliationPolicy.swift; sourceTree = "<group>"; };
 		39341FC934A61DD7BF70E0CD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3C8ECF0F71867EA6CCB33427 /* WidgetSnapshotRefreshTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotRefreshTests.swift; sourceTree = "<group>"; };
 		406945131D2A36B7ECC3CDAA /* RemoteNotificationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteNotificationDelegate.swift; sourceTree = "<group>"; };
+		423D8246816F710755DF1157 /* EnzoBell.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = EnzoBell.wav; sourceTree = "<group>"; };
 		4BF4C58BA3AEEECB44542933 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		5FCBB7C5DDA352AD5B96501C /* FeedAlarmSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedAlarmSettingsTests.swift; sourceTree = "<group>"; };
 		607AB0175AB44F95DD076EFE /* AlarmTriggerCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmTriggerCalculatorTests.swift; sourceTree = "<group>"; };
 		658791B3A533E9E7F53B9DD0 /* AlarmReconciliationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmReconciliationPolicy.swift; sourceTree = "<group>"; };
 		6B5728876A6A1D4311ABA3AE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		75FC6D130E27158886AFD640 /* Enzo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Enzo.entitlements; sourceTree = "<group>"; };
 		7ACE61A169550810BB7DC844 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
+		86CAE424A0634BC06CB03AA5 /* EnzoGentleChime.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = EnzoGentleChime.wav; sourceTree = "<group>"; };
 		8CB3464049165C3CEF2FE893 /* AlarmReconciliationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmReconciliationPolicyTests.swift; sourceTree = "<group>"; };
 		8E81852D6032E666B9F5FBE9 /* FeedLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedLiveActivity.swift; sourceTree = "<group>"; };
+		97D844700A139ED004136B8B /* EnzoBrightChime.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = EnzoBrightChime.wav; sourceTree = "<group>"; };
 		9F3952F9D80AD3C2974B203B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A25C07BFF3DD4858F4651AB3 /* EnzoLiveActivity.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = EnzoLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A267EA981CA419A55629D0F0 /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
+		A7904EA0A295B4028DA4A92D /* WidgetRemoteUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetRemoteUpdates.swift; sourceTree = "<group>"; };
 		AF83C8401CF13E2951424695 /* EnzoPrototypeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnzoPrototypeApp.swift; sourceTree = "<group>"; };
 		B2319649500C3DE8D6F41649 /* EnzoLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnzoLiveActivityBundle.swift; sourceTree = "<group>"; };
 		BB856CF1FBD7B755AFFD689D /* VolumeUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeUnit.swift; sourceTree = "<group>"; };
@@ -110,10 +128,22 @@
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		0CECBB9E698D57A01BB7477F /* Sounds */ = {
+			isa = PBXGroup;
+			children = (
+				423D8246816F710755DF1157 /* EnzoBell.wav */,
+				97D844700A139ED004136B8B /* EnzoBrightChime.wav */,
+				2486A30B26551C82693941FD /* EnzoClassicAlarm.wav */,
+				86CAE424A0634BC06CB03AA5 /* EnzoGentleChime.wav */,
+			);
+			path = Sounds;
+			sourceTree = "<group>";
+		};
 		3E2DEE87FAF37BCB9327CB91 /* App */ = {
 			isa = PBXGroup;
 			children = (
 				003FBBFE605F96C77F183146 /* ActivityService.swift */,
+				3157405981CAC2AB2B41AF74 /* AlarmAcknowledgement.swift */,
 				658791B3A533E9E7F53B9DD0 /* AlarmReconciliationPolicy.swift */,
 				15B61593BCAD91AB858B98C3 /* AlarmService.swift */,
 				2AB18FB20894BA2C6253D26D /* AlarmTriggerCalculator.swift */,
@@ -131,6 +161,7 @@
 				406945131D2A36B7ECC3CDAA /* RemoteNotificationDelegate.swift */,
 				067E19C667CFC5F5D28C6496 /* Secrets.example.swift */,
 				A267EA981CA419A55629D0F0 /* Secrets.swift */,
+				0CECBB9E698D57A01BB7477F /* Sounds */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -151,6 +182,7 @@
 				39341FC934A61DD7BF70E0CD /* Assets.xcassets */,
 				EA6632FF24E498D1DCBBC3D6 /* FeedActivityAttributes.swift */,
 				BB856CF1FBD7B755AFFD689D /* VolumeUnit.swift */,
+				A7904EA0A295B4028DA4A92D /* WidgetRemoteUpdates.swift */,
 				7ACE61A169550810BB7DC844 /* WidgetSnapshot.swift */,
 			);
 			path = Shared;
@@ -185,7 +217,9 @@
 				8CB3464049165C3CEF2FE893 /* AlarmReconciliationPolicyTests.swift */,
 				607AB0175AB44F95DD076EFE /* AlarmTriggerCalculatorTests.swift */,
 				E3A8C1AF1F87371C8EA162A6 /* DailyReferenceTests.swift */,
+				5FCBB7C5DDA352AD5B96501C /* FeedAlarmSettingsTests.swift */,
 				E295D7571127A13C2C55A383 /* LiveActivityReconciliationPolicyTests.swift */,
+				3C8ECF0F71867EA6CCB33427 /* WidgetSnapshotRefreshTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -308,6 +342,10 @@
 			files = (
 				C2B30C36C42F9136675EE003 /* Assets.xcassets in Resources */,
 				FBC13E892F8887B96C7903F0 /* Assets.xcassets in Resources */,
+				AC258262531902CA478AE6CD /* EnzoBell.wav in Resources */,
+				D71C4D5BAAC030B23528136B /* EnzoBrightChime.wav in Resources */,
+				21C9F9574714A8EF2BE50BA5 /* EnzoClassicAlarm.wav in Resources */,
+				B129472D72DC8C58E3FDCCA9 /* EnzoGentleChime.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -322,7 +360,9 @@
 				1E11C2CCCCCA24437B609CC4 /* EnzoTodayWidget.swift in Sources */,
 				B3FDFBC53ACB0EE7999CFD52 /* FeedActivityAttributes.swift in Sources */,
 				B7955FD7B1704B456E794590 /* FeedLiveActivity.swift in Sources */,
+				D6537FE4669649C28A94D169 /* Secrets.swift in Sources */,
 				E51B5AF7C7D8A7E56937D6E8 /* VolumeUnit.swift in Sources */,
+				00E077A364FDFE906BA4462C /* WidgetRemoteUpdates.swift in Sources */,
 				4350346BD906E426FA411B19 /* WidgetSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -334,7 +374,9 @@
 				536DBB9DC9339D5D1EE22812 /* AlarmReconciliationPolicyTests.swift in Sources */,
 				DCCE2F5C6CC6228AAB830C67 /* AlarmTriggerCalculatorTests.swift in Sources */,
 				592624D40DA85A3A4366EC78 /* DailyReferenceTests.swift in Sources */,
+				8AB109AA059E3C4871DC3A75 /* FeedAlarmSettingsTests.swift in Sources */,
 				EA43428CE3DD9E96E5A74321 /* LiveActivityReconciliationPolicyTests.swift in Sources */,
+				88F983E545C7071B2EB28082 /* WidgetSnapshotRefreshTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -344,6 +386,7 @@
 			files = (
 				2E699701855F41E072C885D6 /* APIClient.swift in Sources */,
 				3C84FC3FC98D80AF6BFCE611 /* ActivityService.swift in Sources */,
+				47ACBE990F07944CFC82D99B /* AlarmAcknowledgement.swift in Sources */,
 				69D0FB48C0312DFB8484E36D /* AlarmReconciliationPolicy.swift in Sources */,
 				C23E237D68CEDFE97E985D3B /* AlarmService.swift in Sources */,
 				B92E780A11FD49AACE720163 /* AlarmTriggerCalculator.swift in Sources */,
@@ -359,6 +402,7 @@
 				193B434860B25927BC87BBA2 /* Secrets.example.swift in Sources */,
 				526359FFF0D785EEB4ACAEE5 /* Secrets.swift in Sources */,
 				F7404CA42A30ECFD3835B23C /* VolumeUnit.swift in Sources */,
+				C26E5BCE88C693A5B28FE589 /* WidgetRemoteUpdates.swift in Sources */,
 				3F2C58A25F158A861C0804F7 /* WidgetSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -490,7 +534,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2026.9.3;
+				CURRENT_PROJECT_VERSION = 2026.9.7;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3B468RG7H6;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -550,7 +594,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2026.9.3;
+				CURRENT_PROJECT_VERSION = 2026.9.7;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3B468RG7H6;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

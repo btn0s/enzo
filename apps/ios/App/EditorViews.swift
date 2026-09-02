@@ -43,6 +43,12 @@ struct FeedEditorView: View {
                     }
                 }
 
+                Section {
+                    Toggle("Set next-feed alarm", isOn: $draft.resetsTimer)
+                } footer: {
+                    Text("Turn this off for a top-up. The feed is saved without moving the countdown, Live Activity, or feed alarm.")
+                }
+
                 if draft.eventID != nil {
                     Section {
                         Button("Delete entry", role: .destructive) { confirmsDeletion = true }
@@ -377,7 +383,9 @@ struct SettingsIndexView: View {
         case .volume:
             model.volumeUnit.label
         case .alarms:
-            AlarmLeadFormatting.label(for: model.alarmLeadMinutes)
+            model.alarmsEnabled
+                ? "\(model.alarmCadence.title) · \(model.alarmSound.title)"
+                : "Off"
         }
     }
 }
@@ -560,87 +568,189 @@ struct SettingsDetailView: View {
     }
 
     private var alarmsSection: some View {
-        Section {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: alarmStatus.symbol)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(alarmStatus.color)
-                    .frame(width: 36, height: 36)
-                    .background(alarmStatus.color.opacity(0.12), in: Circle())
+        Group {
+            Section {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: alarmStatus.symbol)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(alarmStatus.color)
+                        .frame(width: 36, height: 36)
+                        .background(alarmStatus.color.opacity(0.12), in: Circle())
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(alarmStatus.title)
-                        .font(.subheadline.weight(.semibold))
-                    Text(alarmStatus.detail)
-                        .font(.caption)
-                        .foregroundStyle(EnzoPalette.muted)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(.vertical, 2)
-
-            LabeledContent("Alarm before due") {
-                HStack(spacing: 6) {
-                    TextField("0", text: $leadDraft)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 54)
-                        .focused($leadFocused)
-                        .accessibilityLabel("Minutes before feed due")
-                    Text("min")
-                        .foregroundStyle(EnzoPalette.muted)
-                }
-            }
-
-            Stepper(value: leadStepperBinding, in: AlarmTriggerCalculator.leadRange) {
-                Text(AlarmLeadFormatting.label(for: model.alarmLeadMinutes))
-            }
-            .accessibilityHint("Adjusts when the feed alarm fires before the due time")
-
-            if let alarmWarning = model.alarmWarning {
-                Text(alarmWarning)
-                    .font(.caption)
-                    .foregroundStyle(EnzoPalette.attention)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if alarmPermissionDenied {
-                    Button {
-                        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-                        UIApplication.shared.open(url)
-                    } label: {
-                        Label("Open iPhone Settings", systemImage: "gearshape.fill")
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(alarmStatus.title)
+                            .font(.subheadline.weight(.semibold))
+                        Text(alarmStatus.detail)
+                            .font(.caption)
+                            .foregroundStyle(EnzoPalette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+                .padding(.vertical, 2)
+
+                Toggle("Feed alarms", isOn: alarmsEnabledBinding)
+
+                if let alarmWarning = model.alarmWarning {
+                    Text(alarmWarning)
+                        .font(.caption)
+                        .foregroundStyle(EnzoPalette.attention)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if alarmPermissionDenied {
+                        Button {
+                            guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                            UIApplication.shared.open(url)
+                        } label: {
+                            Label("Open iPhone Settings", systemImage: "gearshape.fill")
+                        }
+                    }
+                }
+            } header: {
+                Text("Alarms")
+            } footer: {
+                Text("Alarm settings are stored only on this iPhone. Other phones keep their own alarm settings.")
             }
 
-            Button {
-                Task { await model.testAlarm() }
-            } label: {
-                Label("Test alarm in 10 seconds", systemImage: "alarm.waves.left.and.right")
-            }
-            .disabled(model.isBusy)
+            Section {
+                LabeledContent("Alarm before due") {
+                    HStack(spacing: 6) {
+                        TextField("0", text: $leadDraft)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 54)
+                            .focused($leadFocused)
+                            .accessibilityLabel("Minutes before feed due")
+                        Text("min")
+                            .foregroundStyle(EnzoPalette.muted)
+                    }
+                }
 
-            if let message = model.alarmTestMessage {
-                Label(message, systemImage: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(EnzoPalette.success)
-                    .fixedSize(horizontal: false, vertical: true)
+                Picker("Cadence", selection: alarmCadenceBinding) {
+                    ForEach(AlarmCadence.allCases) { cadence in
+                        Text(cadence.title).tag(cadence)
+                    }
+                }
+
+                Picker("Sound", selection: alarmSoundBinding) {
+                    ForEach(AlarmSound.allCases) { sound in
+                        Text(sound.title).tag(sound)
+                    }
+                }
+
+                Button {
+                    Task { await model.testAlarm() }
+                } label: {
+                    Label("Test selected sound in 10 seconds", systemImage: "alarm.waves.left.and.right")
+                }
+                .disabled(model.isBusy)
+
+                if let message = model.alarmTestMessage {
+                    Label(message, systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(EnzoPalette.success)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            } header: {
+                Text("Behavior")
+            } footer: {
+                Text(alarmCadenceFooter)
             }
-        } header: {
-            Text("Alarms")
-        } footer: {
-            Text("This setting stays on this iPhone. Finish editing minutes or use the stepper to reschedule; the test verifies permission, sound, and the system alarm screen.")
+
+            Section {
+                Toggle("Limit alarm hours", isOn: alarmActiveHoursEnabledBinding)
+
+                if model.alarmActiveHoursEnabled {
+                    DatePicker(
+                        "From",
+                        selection: alarmActiveHoursStartBinding,
+                        displayedComponents: .hourAndMinute
+                    )
+                    DatePicker(
+                        "Until",
+                        selection: alarmActiveHoursEndBinding,
+                        displayedComponents: .hourAndMinute
+                    )
+                }
+            } header: {
+                Text("Active hours")
+            } footer: {
+                Text("Outside this range Enzo stays silent. Overnight ranges, such as 8 PM–7 AM, are supported.")
+            }
         }
     }
 
-    private var leadStepperBinding: Binding<Int> {
+    private var alarmsEnabledBinding: Binding<Bool> {
         Binding(
-            get: { model.alarmLeadMinutes },
-            set: { newValue in
-                leadDraft = String(newValue)
-                Task { await model.setAlarmLeadMinutes(newValue) }
+            get: { model.alarmsEnabled },
+            set: { enabled in
+                Task { await model.setAlarmsEnabled(enabled) }
             }
         )
+    }
+
+    private var alarmCadenceBinding: Binding<AlarmCadence> {
+        Binding(
+            get: { model.alarmCadence },
+            set: { cadence in
+                Task { await model.setAlarmCadence(cadence) }
+            }
+        )
+    }
+
+    private var alarmSoundBinding: Binding<AlarmSound> {
+        Binding(
+            get: { model.alarmSound },
+            set: { sound in
+                Task { await model.setAlarmSound(sound) }
+            }
+        )
+    }
+
+    private var alarmActiveHoursEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { model.alarmActiveHoursEnabled },
+            set: { enabled in
+                Task { await model.setAlarmActiveHoursEnabled(enabled) }
+            }
+        )
+    }
+
+    private var alarmActiveHoursStartBinding: Binding<Date> {
+        Binding(
+            get: { alarmTime(for: model.alarmActiveHoursStartMinutes) },
+            set: { date in
+                Task { await model.setAlarmActiveHours(startMinutes: alarmMinutes(from: date)) }
+            }
+        )
+    }
+
+    private var alarmActiveHoursEndBinding: Binding<Date> {
+        Binding(
+            get: { alarmTime(for: model.alarmActiveHoursEndMinutes) },
+            set: { date in
+                Task { await model.setAlarmActiveHours(endMinutes: alarmMinutes(from: date)) }
+            }
+        )
+    }
+
+    private var alarmCadenceFooter: String {
+        if let minutes = model.alarmCadence.repeatMinutes {
+            return "Remind me schedules the next alert exactly \(minutes) minutes later. Acknowledge ends the alarm."
+        }
+        return "The alarm rings once. Acknowledge it and it stays off until another feed starts the timer."
+    }
+
+    private func alarmTime(for minutes: Int) -> Date {
+        Calendar.current.date(
+            byAdding: .minute,
+            value: minutes,
+            to: Calendar.current.startOfDay(for: Date())
+        )!
+    }
+
+    private func alarmMinutes(from date: Date) -> Int {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return (components.hour ?? 0) * 60 + (components.minute ?? 0)
     }
 
     private func commitLeadDraft() {
@@ -721,12 +831,28 @@ struct SettingsDetailView: View {
     }
 
     private var alarmStatus: (title: String, detail: String, symbol: String, color: Color) {
+        if !model.alarmsEnabled {
+            return (
+                "Off",
+                "Feed alarms are disabled on this iPhone.",
+                "alarm.slash.fill",
+                EnzoPalette.muted
+            )
+        }
         if model.alarmWarning != nil {
             return (
                 "Needs attention",
                 "Enzo could not schedule the feed alarm.",
                 "exclamationmark.triangle.fill",
                 EnzoPalette.attention
+            )
+        }
+        if model.currentFeedAlarmAcknowledged {
+            return (
+                "Acknowledged",
+                "This feed alarm stays off until another feed starts the next-feed timer.",
+                "checkmark.circle.fill",
+                EnzoPalette.success
             )
         }
         if let nextFeedAt = model.state?.nextFeedAt,
@@ -739,6 +865,14 @@ struct SettingsDetailView: View {
                 "\(trigger.formatted(date: .omitted, time: .shortened)), \(lead). Feed due \(nextFeedAt.formatted(date: .omitted, time: .shortened)).",
                 "alarm.fill",
                 EnzoPalette.success
+            )
+        }
+        if model.alarmActiveHoursEnabled, model.state?.nextFeedAt != nil {
+            return (
+                "Silenced",
+                "The next feed alarm falls outside your active hours.",
+                "moon.zzz.fill",
+                EnzoPalette.muted
             )
         }
         return (

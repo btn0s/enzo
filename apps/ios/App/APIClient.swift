@@ -160,6 +160,43 @@ struct APIClient {
         guard response.ok else { throw URLError(.cannotParseResponse) }
     }
 
+    func registerLiveActivity(
+        token: String,
+        activityID: String,
+        eventID: String,
+        environment: PushEnvironment
+    ) async throws {
+        struct Body: Encodable {
+            let token: String
+            let activityID: String
+            let eventID: String
+            let environment: PushEnvironment
+        }
+        struct Response: Decodable { let ok: Bool }
+        let response: Response = try await request(
+            path: "/api/live-activities",
+            method: "POST",
+            body: Body(
+                token: token,
+                activityID: activityID,
+                eventID: eventID,
+                environment: environment
+            )
+        )
+        guard response.ok else { throw URLError(.cannotParseResponse) }
+    }
+
+    func unregisterLiveActivity(activityID: String) async throws {
+        struct Response: Decodable { let ok: Bool }
+        let encodedID = activityID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
+            ?? activityID
+        let response: Response = try await request(
+            path: "/api/live-activities/\(encodedID)",
+            method: "DELETE"
+        )
+        guard response.ok else { throw URLError(.cannotParseResponse) }
+    }
+
     func createCheckup(_ checkup: Checkup) async throws -> MutationResponse {
         try await request(path: "/api/checkups", method: "POST", body: checkup)
     }

@@ -5,7 +5,10 @@
 
 ## What this tests
 
-- AlarmKit schedules the next feeding alarm on iOS 26.
+- AlarmKit schedules a configurable next-feed alarm on iOS 26 with a per-device
+  toggle, lead time, active-hours window, selected sound, and optional explicit
+  “Remind me” interval. Alarms can also be skipped for an individual feed;
+  acknowledging one prevents reconciliation from recreating it.
 - A Live Activity and a home screen widget show the next-feed countdown; tapping either opens the app.
 - A feed is one completed entry flow with milk, amount, and an intelligently defaulted time.
 - The dashboard leads with the exact next-feed time; its countdown is supporting context.

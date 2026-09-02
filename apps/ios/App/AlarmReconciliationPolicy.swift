@@ -20,11 +20,22 @@ struct AlarmReconciliationPolicy {
     func plan(
         desiredEventID: String?,
         desiredDate: Date?,
+        desiredDueAt: Date? = nil,
         storedAlarmID: UUID?,
         storedDesiredDate: Date? = nil,
+        acknowledgedEventID: String? = nil,
+        acknowledgedDueAt: Date? = nil,
+        isEnabled: Bool = true,
+        configurationMatches: Bool = true,
         alarms: [AlarmDescriptor]
     ) -> AlarmReconciliationPlan {
-        guard let desiredEventID, let desiredDate else {
+        let acknowledgementMatches = desiredEventID == acknowledgedEventID
+            && desiredDueAt != nil
+            && desiredDueAt == acknowledgedDueAt
+        guard isEnabled,
+              let desiredEventID,
+              let desiredDate,
+              !acknowledgementMatches else {
             return AlarmReconciliationPlan(
                 keepID: nil,
                 cancelIDs: alarms.map(\.id),
@@ -33,10 +44,14 @@ struct AlarmReconciliationPolicy {
         }
 
         let storedAlarm = alarms.first { $0.id == storedAlarmID }
-        let reusable = storedDesiredDate == desiredDate
-            ? storedAlarm
-            : alarms.first { $0.date == desiredDate }
-
+        let reusable: AlarmDescriptor?
+        if configurationMatches {
+            reusable = storedDesiredDate == desiredDate
+                ? storedAlarm
+                : alarms.first { $0.date == desiredDate }
+        } else {
+            reusable = nil
+        }
         return AlarmReconciliationPlan(
             keepID: reusable?.id,
             cancelIDs: alarms.filter { $0.id != reusable?.id }.map(\.id),
@@ -44,5 +59,19 @@ struct AlarmReconciliationPolicy {
                 ? AlarmScheduleRequest(eventID: desiredEventID, date: desiredDate)
                 : nil
         )
+    }
+
+    func shouldContinueReminder(
+        desiredEventID: String?,
+        desiredDueAt: Date?,
+        storedEventID: String?,
+        storedDueAt: Date?,
+        isReminder: Bool,
+        hasStoredAlarm: Bool
+    ) -> Bool {
+        isReminder
+            && hasStoredAlarm
+            && storedEventID == desiredEventID
+            && (storedDueAt == nil || storedDueAt == desiredDueAt)
     }
 }

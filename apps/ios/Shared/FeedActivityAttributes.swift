@@ -8,4 +8,5 @@ struct FeedActivityAttributes: ActivityAttributes {
 
     var eventID: String
     var createdAt: Date
+    var supportsRemoteUpdates: Bool?
 }

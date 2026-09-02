@@ -10,7 +10,7 @@ settings:
     DEVELOPMENT_TEAM: 3B468RG7H6
     CODE_SIGN_STYLE: Automatic
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "2026.9.3"
+    CURRENT_PROJECT_VERSION: "2026.9.7"
 targets:
   EnzoPrototype:
     type: application
@@ -54,6 +54,7 @@ targets:
     sources:
       - path: LiveActivity
       - path: Shared
+      - path: App/Secrets.swift
     info:
       path: LiveActivity/Info.plist
       properties:

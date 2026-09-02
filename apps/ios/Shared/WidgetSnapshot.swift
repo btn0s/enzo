@@ -1,7 +1,7 @@
 import Foundation
 
-/// What the home screen widget shows. The app writes it after every state
-/// change; the widget extension only reads it.
+/// What the home screen widget shows. The app writes after local changes; the
+/// widget refreshes the same cache directly when WidgetKit wakes it remotely.
 struct WidgetSnapshot: Codable, Hashable {
     var nextFeedAt: Date?
     var milkMl: Double

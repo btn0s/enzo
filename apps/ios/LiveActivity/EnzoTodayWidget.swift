@@ -2,8 +2,10 @@ import SwiftUI
 import WidgetKit
 
 struct EnzoTodayWidget: Widget {
+    static let kind = "com.btn0s.enzo.today"
+
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "com.btn0s.enzo.today", provider: SnapshotProvider()) { entry in
+        StaticConfiguration(kind: Self.kind, provider: SnapshotProvider()) { entry in
             EnzoTodayWidgetView(snapshot: entry.snapshot)
                 .containerBackground(for: .widget) {
                     LinearGradient(
@@ -16,6 +18,18 @@ struct EnzoTodayWidget: Widget {
         .configurationDisplayName("Enzo")
         .description("Next feed countdown and today’s totals.")
         .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
+        .pushHandler(EnzoWidgetPushHandler.self)
+    }
+}
+
+private struct EnzoWidgetPushHandler: WidgetPushHandler {
+    init() {}
+
+    func pushTokenDidChange(_ pushInfo: WidgetPushInfo, widgets: [WidgetInfo]) {
+        let enabled = widgets.contains { $0.kind == EnzoTodayWidget.kind }
+        Task {
+            try? await WidgetRemoteClient().registerPushToken(pushInfo.token, enabled: enabled)
+        }
     }
 }
 
@@ -34,15 +48,27 @@ private struct SnapshotProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<SnapshotEntry>) -> Void) {
-        let now = Date()
-        let snapshot = WidgetSnapshotStore.load()
-        // The countdown text ticks on its own; re-render when the feed comes due
-        // so "Due now" appears, otherwise at the next local midnight so Today resets.
-        var refresh = Calendar.current.startOfDay(for: now).addingTimeInterval(86_400)
-        if let next = snapshot?.nextFeedAt, next > now, next < refresh {
-            refresh = next
+        let cached = WidgetSnapshotStore.load()
+        Task {
+            let snapshot = await WidgetSnapshotRefresher {
+                try await WidgetRemoteClient().state()
+            }.refresh(cached: cached)
+            if let snapshot {
+                WidgetSnapshotStore.save(snapshot)
+            }
+
+            let now = Date()
+            // The countdown text ticks on its own; re-render when the feed comes
+            // due so "Due now" appears, otherwise at the next local midnight.
+            var refresh = Calendar.current.startOfDay(for: now).addingTimeInterval(86_400)
+            if let next = snapshot?.nextFeedAt, next > now, next < refresh {
+                refresh = next
+            }
+            completion(Timeline(
+                entries: [SnapshotEntry(date: now, snapshot: snapshot)],
+                policy: .after(refresh)
+            ))
         }
-        completion(Timeline(entries: [SnapshotEntry(date: now, snapshot: snapshot)], policy: .after(refresh)))
     }
 }
 

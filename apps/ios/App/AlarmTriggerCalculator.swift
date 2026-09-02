@@ -21,6 +21,6 @@ enum AlarmTriggerCalculator {
 
 private extension ClosedRange where Bound == Int {
     func clamp(_ value: Int) -> Int {
-        min(max(value, lowerBound), upperBound)
+        Swift.min(Swift.max(value, lowerBound), upperBound)
     }
 }

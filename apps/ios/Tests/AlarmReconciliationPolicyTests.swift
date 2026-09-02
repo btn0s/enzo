@@ -27,6 +27,83 @@ final class AlarmReconciliationPolicyTests: XCTestCase {
         )
     }
 
+    func testDoesNotRecreateAcknowledgedOneTimeAlarm() {
+        let stoppedAlarmID = UUID()
+        let plan = policy.plan(
+            desiredEventID: "feed-midnight",
+            desiredDate: dueAt,
+            desiredDueAt: dueAt,
+            storedAlarmID: stoppedAlarmID,
+            acknowledgedEventID: "feed-midnight",
+            acknowledgedDueAt: dueAt,
+            isEnabled: true,
+            alarms: []
+        )
+
+        XCTAssertNil(plan.keepID)
+        XCTAssertEqual(plan.cancelIDs, [])
+        XCTAssertNil(plan.schedule)
+    }
+
+    func testReplacesAcknowledgedAlarmWhenServerDueTimeChanges() {
+        let oldAlarmID = UUID()
+        let oldDueAt = dueAt.addingTimeInterval(-60 * 60)
+        let plan = policy.plan(
+            desiredEventID: "feed-midnight",
+            desiredDate: dueAt,
+            desiredDueAt: dueAt,
+            storedAlarmID: oldAlarmID,
+            acknowledgedEventID: "feed-midnight",
+            acknowledgedDueAt: oldDueAt,
+            alarms: [AlarmDescriptor(id: oldAlarmID, date: oldDueAt)]
+        )
+
+        XCTAssertNil(plan.keepID)
+        XCTAssertEqual(plan.cancelIDs, [oldAlarmID])
+        XCTAssertEqual(
+            plan.schedule,
+            AlarmScheduleRequest(eventID: "feed-midnight", date: dueAt)
+        )
+    }
+
+    func testUpdatedDueTimeStopsReusingSnoozedReminder() {
+        XCTAssertFalse(policy.shouldContinueReminder(
+            desiredEventID: "feed-midnight",
+            desiredDueAt: dueAt,
+            storedEventID: "feed-midnight",
+            storedDueAt: dueAt.addingTimeInterval(-60 * 60),
+            isReminder: true,
+            hasStoredAlarm: true
+        ))
+    }
+
+    func testUnchangedDueTimeKeepsSnoozedReminder() {
+        XCTAssertTrue(policy.shouldContinueReminder(
+            desiredEventID: "feed-midnight",
+            desiredDueAt: dueAt,
+            storedEventID: "feed-midnight",
+            storedDueAt: dueAt,
+            isReminder: true,
+            hasStoredAlarm: true
+        ))
+    }
+
+    func testDisabledAlarmCancelsExistingAlarmWithoutReplacement() {
+        let alarmID = UUID()
+        let plan = policy.plan(
+            desiredEventID: "feed-midnight",
+            desiredDate: dueAt,
+            storedAlarmID: alarmID,
+            acknowledgedEventID: nil,
+            isEnabled: false,
+            alarms: [AlarmDescriptor(id: alarmID, date: dueAt)]
+        )
+
+        XCTAssertNil(plan.keepID)
+        XCTAssertEqual(plan.cancelIDs, [alarmID])
+        XCTAssertNil(plan.schedule)
+    }
+
     func testKeepsMatchingScheduledAlarm() {
         let alarmID = UUID()
         let plan = policy.plan(
@@ -68,6 +145,22 @@ final class AlarmReconciliationPolicyTests: XCTestCase {
 
         XCTAssertEqual(plan.keepID, alarmID)
         XCTAssertNil(plan.schedule)
+    }
+
+    func testConfigurationChangeReplacesMatchingAlarm() {
+        let alarmID = UUID()
+        let plan = policy.plan(
+            desiredEventID: "feed-midnight",
+            desiredDate: dueAt,
+            storedAlarmID: alarmID,
+            storedDesiredDate: dueAt,
+            configurationMatches: false,
+            alarms: [AlarmDescriptor(id: alarmID, date: dueAt)]
+        )
+
+        XCTAssertNil(plan.keepID)
+        XCTAssertEqual(plan.cancelIDs, [alarmID])
+        XCTAssertEqual(plan.schedule?.date, dueAt)
     }
 
     func testCancelsAlarmWhenThereIsNoNextFeed() {

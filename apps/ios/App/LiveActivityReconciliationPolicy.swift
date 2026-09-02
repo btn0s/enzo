@@ -12,6 +12,8 @@ struct LiveActivityDescriptor: Equatable {
     let id: String
     let state: State
     let createdAt: Date
+    let eventID: String
+    let supportsRemoteUpdates: Bool
 }
 
 struct LiveActivityReconciliationPlan: Equatable {
@@ -26,11 +28,12 @@ struct LiveActivityReconciliationPolicy {
     static let maximumReusableAge: TimeInterval = 6 * 60 * 60
 
     func plan(
-        hasDesiredActivity: Bool,
+        desiredEventID: String?,
         activities: [LiveActivityDescriptor],
-        now: Date
+        now: Date,
+        canRequestActivity: Bool = true
     ) -> LiveActivityReconciliationPlan {
-        guard hasDesiredActivity else {
+        guard desiredEventID != nil else {
             return LiveActivityReconciliationPlan(
                 updateID: nil,
                 endIDs: activities.map(\.id),
@@ -38,18 +41,26 @@ struct LiveActivityReconciliationPolicy {
             )
         }
 
-        let reusable = activities
+        let active = activities.filter {
+            $0.state == .active || $0.state == .stale
+        }
+        let reusable = active
             .filter { descriptor in
-                let canUpdate = descriptor.state == .active || descriptor.state == .stale
                 let age = now.timeIntervalSince(descriptor.createdAt)
-                return canUpdate && age >= 0 && age < Self.maximumReusableAge
+                return descriptor.supportsRemoteUpdates
+                    && age >= 0
+                    && age < Self.maximumReusableAge
             }
             .max { $0.createdAt < $1.createdAt }
+        let fallback = canRequestActivity
+            ? nil
+            : active.max { $0.createdAt < $1.createdAt }
+        let update = reusable ?? fallback
 
         return LiveActivityReconciliationPlan(
-            updateID: reusable?.id,
-            endIDs: activities.filter { $0.id != reusable?.id }.map(\.id),
-            shouldRequest: reusable == nil
+            updateID: update?.id,
+            endIDs: activities.filter { $0.id != update?.id }.map(\.id),
+            shouldRequest: update == nil
         )
     }
 }
