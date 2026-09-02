@@ -53,12 +53,13 @@ final class DailyReferenceTests: XCTestCase {
     }
 
     func testGoalsFallBackToGuidanceWithoutCheckup() {
-        let goals = DailyGoals.resolve(checkup: nil, weightKg: 3.4, day: 4, hoursOfAge: 87, defaultIntervalMinutes: 180)
+        let goals = DailyGoals.resolve(checkup: nil, weightKg: 3.4, day: 4, hoursOfAge: 87, defaultIntervalMinutes: 120)
         XCTAssertEqual(goals.feeds.value, 8...12)
         XCTAssertEqual(goals.feeds.source, .guidance)
         XCTAssertEqual(goals.dailyMilkMl?.value, 340...340)
         XCTAssertEqual(goals.bottleMl?.value, 42.5...42.5)
-        XCTAssertEqual(goals.feedIntervalMinutes.value, 180)
+        XCTAssertEqual(goals.feedIntervalMinutes.value, 120)
+        XCTAssertEqual(goals.feedIntervalMinutes.source, .settings)
         XCTAssertEqual(goals.peeMin?.value, 3)
     }
 
@@ -67,11 +68,12 @@ final class DailyReferenceTests: XCTestCase {
         checkup.bottleMl = 60
         checkup.feedIntervalMinutes = 150
         checkup.feedsMin = 9
-        let goals = DailyGoals.resolve(checkup: checkup, weightKg: 3.4, day: 4, hoursOfAge: 87, defaultIntervalMinutes: 180)
+        let goals = DailyGoals.resolve(checkup: checkup, weightKg: 3.4, day: 4, hoursOfAge: 87, defaultIntervalMinutes: 120)
         XCTAssertEqual(goals.bottleMl?.value, 60...60)
         XCTAssertEqual(goals.bottleMl?.source, .checkup(checkup))
         XCTAssertEqual(goals.bottleMl?.guidance, 42.5...42.5)
         XCTAssertEqual(goals.feedIntervalMinutes.value, 150)
+        XCTAssertEqual(goals.feedIntervalMinutes.guidance, 120)
         XCTAssertEqual(goals.feeds.value, 9...12)
         XCTAssertEqual(goals.dailyMilkMl?.source, .guidance)
         XCTAssertNil(goals.dailyMilkMl?.guidance)
@@ -79,7 +81,7 @@ final class DailyReferenceTests: XCTestCase {
     }
 
     func testGoalsWithoutWeightHaveNoMilkTargets() {
-        let goals = DailyGoals.resolve(checkup: nil, weightKg: nil, day: 4, hoursOfAge: 87, defaultIntervalMinutes: 180)
+        let goals = DailyGoals.resolve(checkup: nil, weightKg: nil, day: 4, hoursOfAge: 87, defaultIntervalMinutes: 120)
         XCTAssertNil(goals.dailyMilkMl)
         XCTAssertNil(goals.bottleMl)
     }
@@ -91,5 +93,33 @@ final class DailyReferenceTests: XCTestCase {
         XCTAssertEqual(VolumeUnit.milliliters.format(ml: ml), "74 mL")
         XCTAssertEqual(VolumeUnit.ounces.format(range: 510...680), "17.2–23 oz")
         XCTAssertEqual(VolumeUnit.milliliters.format(range: 340...340), "340 mL")
+    }
+
+    func testFeedIntervalOptionsUseHourLabels() {
+        XCTAssertEqual(FeedIntervalFormatting.options, [60, 90, 120, 150, 180, 210, 240])
+        XCTAssertEqual(FeedIntervalFormatting.label(for: 120), "Every 2 hours")
+        XCTAssertEqual(FeedIntervalFormatting.label(for: 150), "Every 2½ hours")
+    }
+
+    func testProfileDecodesSharedFeedInterval() throws {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let profile = try decoder.decode(
+            Profile.self,
+            from: Data(
+                #"{"birthAt":"2026-08-29T04:00:00Z","feedIntervalMinutes":120}"#.utf8
+            )
+        )
+        XCTAssertEqual(profile.feedIntervalMinutes, 120)
+    }
+
+    func testProfileDecodesLegacyPayloadWithoutFeedInterval() throws {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let profile = try decoder.decode(
+            Profile.self,
+            from: Data(#"{"birthAt":"2026-08-29T04:00:00Z"}"#.utf8)
+        )
+        XCTAssertNil(profile.feedIntervalMinutes)
     }
 }

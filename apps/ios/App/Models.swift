@@ -88,6 +88,7 @@ struct TodaySummary: Decodable {
 
 struct Profile: Decodable, Hashable {
     let birthAt: Date
+    let feedIntervalMinutes: Int?
 }
 
 /// A clinician visit. Every goal field is optional; nil means "use guidance".

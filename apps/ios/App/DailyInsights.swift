@@ -26,8 +26,28 @@ enum PaceStatus {
     case tracking
 }
 
+enum FeedIntervalFormatting {
+    static let options = Array(stride(from: 60, through: 240, by: 30))
+
+    static func label(for minutes: Int) -> String {
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if hours == 0 {
+            return "Every \(minutes) minutes"
+        }
+        if remainder == 0 {
+            return hours == 1 ? "Every hour" : "Every \(hours) hours"
+        }
+        if remainder == 30 {
+            return "Every \(hours)½ hours"
+        }
+        return "Every \(hours) hr \(remainder) min"
+    }
+}
+
 enum GoalSource: Hashable {
     case guidance
+    case settings
     case checkup(Checkup)
 
     var isClinician: Bool {
@@ -35,10 +55,11 @@ enum GoalSource: Hashable {
         return false
     }
 
-    /// "Dr., Sep 4" or "Guidance".
+    /// "Dr., Sep 4", "Settings", or "Guidance".
     var label: String {
         switch self {
         case .guidance: "Guidance"
+        case .settings: "Settings"
         case .checkup(let checkup): "Dr., \(checkup.occurredAt.formatted(.dateTime.month(.abbreviated).day()))"
         }
     }
@@ -101,9 +122,24 @@ struct DailyGoals {
         }
         let bottle = pick(checkup?.bottleMl.map { $0...$0 }, guidance: guidedBottle)
 
+        let feedInterval: Goal<Int>
+        if let interval = checkup?.feedIntervalMinutes, let checkup {
+            feedInterval = Goal(
+                value: interval,
+                source: .checkup(checkup),
+                guidance: defaultIntervalMinutes
+            )
+        } else {
+            feedInterval = Goal(
+                value: defaultIntervalMinutes,
+                source: .settings,
+                guidance: nil
+            )
+        }
+
         return DailyGoals(
             feeds: feeds,
-            feedIntervalMinutes: pick(checkup?.feedIntervalMinutes, guidance: defaultIntervalMinutes)!,
+            feedIntervalMinutes: feedInterval,
             dailyMilkMl: dailyMilk,
             bottleMl: bottle,
             peeMin: pick(checkup?.peeMin, guidance: DailyReference.wetMinimum(day: day)),

@@ -28,13 +28,15 @@ These are tracking references, not diagnoses or replacements for Enzo's clinicia
 - [NHS early bottle-feeding and nappy guidance](https://elht.nhs.uk/application/files/7017/1957/8897/E0126_Early_Bottle_Feeding_V3_Sep23_UNICEF_statement_added_2.pdf) — pee minimums by day of life (1 on days 0–1, 2 on day 2, 3 on days 3–4, 5 on days 5–6, 6 from day 7) and one poop per day.
 
 The daily milk goal is `mL/kg/day for current hours of age × current weight`;
-the per-bottle target spreads it over the low end of the feed range. Checkups
-(Settings → Checkups, stored in D1) record weight and anything the doctor
-changed — bottle size, feed interval, feeds/day, daily milk, pee/poop minimums.
-The latest past checkup wins per field; blank fields fall back to guidance, and
-the Today card and goals sheet label each number's source. Pace icons compare
-today's count with the goal scaled to the time of day. Guidance tables live in
-`App/DailyInsights.swift`.
+the per-bottle target spreads it over the low end of the feed range.
+
+The shared feed interval is set in Settings → Feed schedule (two hours by
+default). Checkups stored in D1 record weight and anything the doctor changed —
+bottle size, feed interval, feeds/day, daily milk, or pee/poop minimums. The
+latest past checkup wins per field; blank fields fall back to guidance or the
+shared feed-interval setting. The Today card and goals sheet label each number's
+source. Pace icons compare today's count with the goal scaled to the time of
+day. Guidance tables live in `App/DailyInsights.swift`.
 
 ## Generate and run
 

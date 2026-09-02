@@ -6,7 +6,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "ENZO_TIMEZONE": "America/Phoenix",
-    "ENZO_INTERVAL_MINUTES": "180"
+    "APNS_KEY_ID": "HZAU8T6U4M",
+    "APNS_TEAM_ID": "3B468RG7H6",
+    "APNS_TOPIC": "com.btn0s.enzo.prototype"
   },
   "d1_databases": [
     {

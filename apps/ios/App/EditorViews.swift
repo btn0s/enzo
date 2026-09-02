@@ -270,63 +270,197 @@ struct DiaperEditorView: View {
     }
 }
 
-struct ProfileSettingsView: View {
+enum SettingsDestination: String, CaseIterable, Identifiable {
+    case profile
+    case checkups
+    case feedSchedule
+    case volume
+    case alarms
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .profile: "Profile"
+        case .checkups: "Checkups"
+        case .feedSchedule: "Feed schedule"
+        case .volume: "Volume"
+        case .alarms: "Alarms"
+        }
+    }
+
+
+    var symbol: String {
+        switch self {
+        case .profile: "person.crop.circle.fill"
+        case .checkups: "stethoscope"
+        case .feedSchedule: "clock.arrow.circlepath"
+        case .volume: "scalemass.fill"
+        case .alarms: "alarm.fill"
+        }
+    }
+}
+
+struct SettingsIndexView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
-    @State private var birthDraft: Date
-    @State private var checkupRoute: CheckupRoute?
-    @State private var leadDraft = ""
-    @FocusState private var leadFocused: Bool
-
-    init(model: AppModel) {
-        self.model = model
-        _birthDraft = State(initialValue: model.birthDate)
-    }
 
     var body: some View {
         NavigationStack {
-            Form {
-                profileSection
-                checkupsSection
-                volumeSection
-                alarmsSection
+            List {
+                Section("Enzo") {
+                    destinationRow(.profile)
+                    destinationRow(.checkups)
+                }
+
+                Section("Preferences") {
+                    destinationRow(.feedSchedule)
+                    destinationRow(.volume)
+                    destinationRow(.alarms)
+                }
             }
             .scrollContentBackground(.hidden)
             .background(EnzoPalette.canvas)
             .foregroundStyle(EnzoPalette.ink)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: SettingsDestination.self) { destination in
+                SettingsDetailView(model: model, destination: destination)
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        commitLeadDraft()
-                        dismiss()
-                    }
+                    Button("Done") { dismiss() }
                 }
-            }
-            .sheet(item: $checkupRoute) { route in
-                CheckupEditorView(
-                    model: model,
-                    checkup: route.checkup,
-                    isNew: route.isNew
-                )
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-                .presentationBackground(.regularMaterial)
-            }
-            .onAppear {
-                leadDraft = String(model.alarmLeadMinutes)
-            }
-            .onChange(of: model.alarmLeadMinutes) { _, minutes in
-                guard !leadFocused else { return }
-                leadDraft = String(minutes)
-            }
-            .onChange(of: leadFocused) { _, focused in
-                guard !focused else { return }
-                commitLeadDraft()
             }
         }
         .tint(EnzoPalette.accent)
+    }
+
+    private func destinationRow(_ destination: SettingsDestination) -> some View {
+        NavigationLink(value: destination) {
+            HStack(spacing: 12) {
+                Image(systemName: destination.symbol)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(EnzoPalette.accent)
+                    .frame(width: 34, height: 34)
+                    .background(EnzoPalette.accentSoft, in: Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(destination.title)
+                        .font(.body.weight(.medium))
+                    Text(detail(for: destination))
+                        .font(.caption)
+                        .foregroundStyle(EnzoPalette.muted)
+                        .lineLimit(2)
+                }
+
+                if destination == .alarms, model.alarmWarning != nil {
+                    Spacer(minLength: 8)
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(EnzoPalette.attention)
+                        .accessibilityLabel("Needs attention")
+                }
+            }
+            .frame(minHeight: 44)
+            .contentShape(.rect)
+        }
+    }
+
+    private func detail(for destination: SettingsDestination) -> String {
+        switch destination {
+        case .profile:
+            "Day \(model.profile.dayOfLife()) · \(model.birthDate.formatted(date: .abbreviated, time: .omitted))"
+        case .checkups:
+            "\(model.state?.checkups.count ?? 0) recorded"
+        case .feedSchedule:
+            FeedIntervalFormatting.label(for: model.defaultFeedIntervalMinutes)
+        case .volume:
+            model.volumeUnit.label
+        case .alarms:
+            AlarmLeadFormatting.label(for: model.alarmLeadMinutes)
+        }
+    }
+}
+
+struct SettingsDetailView: View {
+    @Bindable var model: AppModel
+    let destination: SettingsDestination
+    @State private var birthDraft: Date
+    @State private var checkupRoute: CheckupRoute?
+    @State private var leadDraft = ""
+    @State private var intervalDraft: Int
+    @FocusState private var leadFocused: Bool
+
+    init(model: AppModel, destination: SettingsDestination) {
+        self.model = model
+        self.destination = destination
+        _birthDraft = State(initialValue: model.birthDate)
+        _intervalDraft = State(initialValue: model.defaultFeedIntervalMinutes)
+    }
+
+    var body: some View {
+        Form {
+            selectedSection
+        }
+        .scrollContentBackground(.hidden)
+        .background(EnzoPalette.canvas)
+        .foregroundStyle(EnzoPalette.ink)
+        .navigationTitle(destination.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $checkupRoute) { route in
+            CheckupEditorView(
+                model: model,
+                checkup: route.checkup,
+                isNew: route.isNew
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.regularMaterial)
+        }
+        .onAppear {
+            leadDraft = String(model.alarmLeadMinutes)
+            intervalDraft = model.defaultFeedIntervalMinutes
+        }
+        .onDisappear {
+            if destination == .alarms {
+                commitLeadDraft()
+            }
+        }
+        .onChange(of: model.alarmLeadMinutes) { _, minutes in
+            guard !leadFocused else { return }
+            leadDraft = String(minutes)
+        }
+        .onChange(of: leadFocused) { _, focused in
+            guard !focused else { return }
+            commitLeadDraft()
+        }
+        .onChange(of: intervalDraft) { _, minutes in
+            Task {
+                await model.saveFeedIntervalMinutes(minutes)
+                intervalDraft = model.defaultFeedIntervalMinutes
+            }
+        }
+        .onChange(of: model.defaultFeedIntervalMinutes) { _, minutes in
+            guard intervalDraft != minutes else { return }
+            intervalDraft = minutes
+        }
+        .tint(EnzoPalette.accent)
+    }
+
+    @ViewBuilder
+    private var selectedSection: some View {
+        switch destination {
+        case .profile:
+            profileSection
+        case .checkups:
+            checkupsSection
+        case .feedSchedule:
+            feedScheduleSection
+        case .volume:
+            volumeSection
+        case .alarms:
+            alarmsSection
+        }
     }
 
     private var profileSection: some View {
@@ -395,6 +529,33 @@ struct ProfileSettingsView: View {
                 }
             }
             .pickerStyle(.segmented)
+        }
+    }
+
+    private var feedScheduleSection: some View {
+        Section {
+            Picker("Feed interval", selection: $intervalDraft) {
+                ForEach(FeedIntervalFormatting.options, id: \.self) { minutes in
+                    Text(FeedIntervalFormatting.label(for: minutes)).tag(minutes)
+                }
+            }
+            .disabled(model.isBusy)
+
+            if let checkupInterval = model.state?.activeCheckup?.feedIntervalMinutes {
+                LabeledContent("Currently in use") {
+                    Text(FeedIntervalFormatting.label(for: checkupInterval))
+                        .foregroundStyle(EnzoPalette.muted)
+                        .monospacedDigit()
+                }
+            }
+        } header: {
+            Text("Feed schedule")
+        } footer: {
+            if model.state?.activeCheckup?.feedIntervalMinutes != nil {
+                Text("The active checkup’s interval is currently in use. Clear it from that checkup to use this setting.")
+            } else {
+                Text("The next-feed countdown and alarm are due this long after a timer-resetting feed.")
+            }
         }
     }
 
@@ -811,7 +972,8 @@ struct CheckupEditorView: View {
             optionalIntField(
                 "Feed interval",
                 value: $draft.feedIntervalMinutes,
-                suffix: "min"
+                suffix: "min",
+                placeholder: "Settings"
             )
 
             LabeledContent("Feeds per day") {
@@ -842,7 +1004,7 @@ struct CheckupEditorView: View {
         } header: {
             Text("Doctor’s instructions")
         } footer: {
-            Text("Leave any field blank to use Guidance. A single end of a range is allowed; Enzo will use it as the closest complete range.")
+            Text("Leave Feed interval blank to use Settings; other blank fields use Guidance. A single end of a range is allowed, and Enzo completes it with the closest reference value.")
         }
     }
 
@@ -856,11 +1018,12 @@ struct CheckupEditorView: View {
     private func optionalIntField(
         _ title: String,
         value: Binding<Int?>,
-        suffix: String
+        suffix: String,
+        placeholder: String = "Guidance"
     ) -> some View {
         LabeledContent(title) {
             HStack(spacing: 7) {
-                TextField("Guidance", value: value, format: .number)
+                TextField(placeholder, value: value, format: .number)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 92)
@@ -1102,7 +1265,7 @@ struct GoalsExplainerSheet: View {
                 .font(.caption.weight(.bold))
                 .tracking(1.3)
                 .foregroundStyle(EnzoPalette.accent)
-            Text("Checkup instructions replace only the values that were entered. Everything else follows guidance for his age and latest recorded weight.")
+            Text("Checkup instructions replace only the values that were entered. Feed interval otherwise comes from Settings; age- and weight-based targets use guidance.")
                 .font(.subheadline)
                 .foregroundStyle(EnzoPalette.muted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1145,7 +1308,8 @@ struct GoalsExplainerSheet: View {
                     title: "Feed interval",
                     value: interval(goals.feedIntervalMinutes.value),
                     source: goals.feedIntervalMinutes.source,
-                    guidance: goals.feedIntervalMinutes.guidance.map { interval($0) }
+                    guidance: goals.feedIntervalMinutes.guidance.map { interval($0) },
+                    comparisonSource: "Settings"
                 )
 
                 Divider().overlay(EnzoPalette.divider)
@@ -1315,15 +1479,7 @@ struct GoalsExplainerSheet: View {
     }
 
     private func interval(_ minutes: Int) -> String {
-        let hours = minutes / 60
-        let remainder = minutes % 60
-        if remainder == 0 {
-            return hours == 1 ? "Every hour" : "Every \(hours) hours"
-        }
-        if hours == 0 {
-            return "Every \(minutes) minutes"
-        }
-        return "Every \(hours) hr \(remainder) min"
+        FeedIntervalFormatting.label(for: minutes)
     }
 }
 
@@ -1332,7 +1488,21 @@ private struct GoalRow: View {
     let value: String
     let source: GoalSource
     let guidance: String?
+    let comparisonSource: String
 
+    init(
+        title: String,
+        value: String,
+        source: GoalSource,
+        guidance: String?,
+        comparisonSource: String = "Guidance"
+    ) {
+        self.title = title
+        self.value = value
+        self.source = source
+        self.guidance = guidance
+        self.comparisonSource = comparisonSource
+    }
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Text(title)
@@ -1367,12 +1537,14 @@ private struct GoalRow: View {
         switch source {
         case .guidance:
             provenance = "Guidance"
+        case .settings:
+            provenance = "Settings"
         case .checkup(let checkup):
             provenance = "Checkup · \(checkup.occurredAt.formatted(.dateTime.month(.abbreviated).day()))"
         }
 
         guard let guidance else { return provenance }
-        return "\(provenance) · Guidance \(guidance)"
+        return "\(provenance) · \(comparisonSource) \(guidance)"
     }
 }
 

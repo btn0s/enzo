@@ -125,9 +125,39 @@ struct APIClient {
         )
     }
 
-    func updateProfile(birthAt: Date) async throws -> MutationResponse {
+    func updateBirthDate(_ birthAt: Date) async throws -> MutationResponse {
         struct Body: Encodable { let birthAt: Date }
-        return try await request(path: "/api/profile", method: "PUT", body: Body(birthAt: birthAt))
+        return try await request(
+            path: "/api/profile",
+            method: "PATCH",
+            body: Body(birthAt: birthAt)
+        )
+    }
+
+    func updateFeedIntervalMinutes(_ feedIntervalMinutes: Int) async throws -> MutationResponse {
+        struct Body: Encodable { let feedIntervalMinutes: Int }
+        return try await request(
+            path: "/api/profile",
+            method: "PATCH",
+            body: Body(feedIntervalMinutes: feedIntervalMinutes)
+        )
+    }
+
+    func registerPushDevice(
+        token: String,
+        environment: PushEnvironment
+    ) async throws {
+        struct Body: Encodable {
+            let token: String
+            let environment: PushEnvironment
+        }
+        struct Response: Decodable { let ok: Bool }
+        let response: Response = try await request(
+            path: "/api/push-devices",
+            method: "POST",
+            body: Body(token: token, environment: environment)
+        )
+        guard response.ok else { throw URLError(.cannotParseResponse) }
     }
 
     func createCheckup(_ checkup: Checkup) async throws -> MutationResponse {

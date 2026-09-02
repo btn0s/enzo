@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --port 4318",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler d1 migrations apply enzo --remote && wrangler deploy",
     "types": "wrangler types",
     "check": "tsc --noEmit"
   },

@@ -2,11 +2,12 @@ import SwiftUI
 
 @main
 struct EnzoPrototypeApp: App {
-    @State private var model = AppModel()
+    @UIApplicationDelegateAdaptor(RemoteNotificationDelegate.self)
+    private var notificationDelegate
 
     var body: some Scene {
         WindowGroup {
-            ContentView(model: model)
+            ContentView(model: notificationDelegate.model)
         }
     }
 }

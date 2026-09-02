@@ -38,6 +38,10 @@ final class AppModel {
         state?.currentWeightKg
     }
 
+    var defaultFeedIntervalMinutes: Int {
+        state?.profile.feedIntervalMinutes ?? state?.intervalMinutes ?? 120
+    }
+
     /// Today's goals: active checkup on top of guidance.
     func goals(now: Date = Date()) -> DailyGoals {
         DailyGoals.resolve(
@@ -45,7 +49,7 @@ final class AppModel {
             weightKg: state?.currentWeightKg,
             day: profile.dayOfLife(on: now),
             hoursOfAge: profile.hoursOfAge(at: now),
-            defaultIntervalMinutes: state?.intervalMinutes ?? 180
+            defaultIntervalMinutes: defaultFeedIntervalMinutes
         )
     }
 
@@ -77,10 +81,25 @@ final class AppModel {
 
     func saveBirthDate(_ birthAt: Date) async {
         await perform {
-            let response = try await api.updateProfile(birthAt: birthAt)
+            let response = try await api.updateBirthDate(birthAt)
             state = response.state
             let warning = await reconcileSystemSurfaces(for: response.state)
             status = mutationStatus("Birthday saved", response: response, surfaceWarning: warning)
+        }
+    }
+
+    func saveFeedIntervalMinutes(_ minutes: Int) async {
+        guard FeedIntervalFormatting.options.contains(minutes),
+              minutes != defaultFeedIntervalMinutes else { return }
+        await perform {
+            let response = try await api.updateFeedIntervalMinutes(minutes)
+            state = response.state
+            let warning = await reconcileSystemSurfaces(for: response.state)
+            status = mutationStatus(
+                "Feed interval updated",
+                response: response,
+                surfaceWarning: warning
+            )
         }
     }
 
@@ -105,15 +124,44 @@ final class AppModel {
     func load() async {
         defer { hasCompletedInitialLoad = true }
         do {
-            let syncedState = try await api.state()
-            state = syncedState
-            if let warning = await reconcileSystemSurfaces(for: syncedState) {
-                status = "Synced; \(warning)"
-            } else {
-                status = "Synced"
-            }
+            try await syncState(successStatus: "Synced")
         } catch {
             status = "Offline: \(error.localizedDescription)"
+        }
+    }
+
+    func registerPushToken(
+        _ token: String,
+        environment: PushEnvironment
+    ) async {
+        do {
+            try await api.registerPushDevice(token: token, environment: environment)
+        } catch {
+            status = "Server updates unavailable: \(error.localizedDescription)"
+        }
+    }
+
+    func recordPushRegistrationFailure(_ error: Error) {
+        status = "Server updates unavailable: \(error.localizedDescription)"
+    }
+
+    func refreshFromRemoteNotification() async -> Bool {
+        do {
+            try await syncState(successStatus: "Updated from server")
+            return true
+        } catch {
+            status = "Server update failed: \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    private func syncState(successStatus: String) async throws {
+        let syncedState = try await api.state()
+        state = syncedState
+        if let warning = await reconcileSystemSurfaces(for: syncedState) {
+            status = "\(successStatus); \(warning)"
+        } else {
+            status = successStatus
         }
     }
 
@@ -278,6 +326,6 @@ final class AppModel {
 
 private extension ClosedRange where Bound == Int {
     func clamp(_ value: Int) -> Int {
-        min(max(value, lowerBound), upperBound)
+        Swift.min(Swift.max(value, lowerBound), upperBound)
     }
 }

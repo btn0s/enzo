@@ -21,7 +21,19 @@ type EventRow = {
   deleted_at: string | null;
 };
 
-type ProfileRow = { id: number; birth_at: string; updated_at: string };
+type ProfileRow = {
+  id: number;
+  birth_at: string;
+  feed_interval_minutes: number;
+  updated_at: string;
+};
+type PushEnvironment = "sandbox" | "production";
+
+type PushDeviceRow = {
+  token: string;
+  environment: PushEnvironment;
+};
+
 
 type CheckupRow = {
   id: string;
@@ -177,10 +189,12 @@ async function readState(env: Env) {
   ]);
 
   // The active plan is the latest checkup that has already happened. A checkup
-  // may leave the interval blank, in which case the configured default applies.
+  // may override the family-controlled interval; otherwise the shared profile
+  // setting applies.
   const nowIso = new Date().toISOString();
   const activeCheckup = checkupRows.find((row) => row.occurred_at <= nowIso) ?? null;
-  const intervalMinutes = activeCheckup?.feed_interval_minutes ?? Number(env.ENZO_INTERVAL_MINUTES);
+  const defaultIntervalMinutes = Number(profile!.feed_interval_minutes);
+  const intervalMinutes = activeCheckup?.feed_interval_minutes ?? defaultIntervalMinutes;
 
   const today = localDay(new Date(), timezone);
   const todayRows = rows.filter((row) => localDay(row.occurred_at, timezone) === today);
@@ -197,7 +211,10 @@ async function readState(env: Env) {
     intervalMinutes,
     now: nowIso,
     nextFeedAt,
-    profile: { birthAt: new Date(profile!.birth_at).toISOString() },
+    profile: {
+      birthAt: new Date(profile!.birth_at).toISOString(),
+      feedIntervalMinutes: defaultIntervalMinutes,
+    },
     checkups: checkupRows.map(serializeCheckup),
     activeCheckupId: activeCheckup?.id ?? null,
     lastFeed: lastFeed ? serializeEvent(lastFeed) : null,
@@ -263,8 +280,134 @@ function parseEvent(body: Record<string, unknown>, fixedType?: EventType) {
 async function mutationResponse(env: Env, eventId: string) {
   return { ok: true, eventId, state: await readState(env) };
 }
+let cachedProviderToken: { value: string; issuedAt: number } | undefined;
 
-async function handleApi(request: Request, url: URL, env: Env) {
+function base64Url(value: string | ArrayBuffer) {
+  const binary = typeof value === "string"
+    ? value
+    : String.fromCharCode(...new Uint8Array(value));
+  return btoa(binary)
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/=+$/, "");
+}
+
+function privateKeyBytes(pem: string) {
+  const base64 = pem
+    .replace("-----BEGIN PRIVATE KEY-----", "")
+    .replace("-----END PRIVATE KEY-----", "")
+    .replace(/\s/g, "");
+  return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+}
+
+async function providerToken(env: Env) {
+  const now = Math.floor(Date.now() / 1_000);
+  if (cachedProviderToken && now - cachedProviderToken.issuedAt < 50 * 60) {
+    return cachedProviderToken.value;
+  }
+
+  const privateKey = (env as Env & { APNS_PRIVATE_KEY?: string }).APNS_PRIVATE_KEY;
+  if (!privateKey) throw new Error("APNS_PRIVATE_KEY is not configured");
+
+  const header = base64Url(JSON.stringify({ alg: "ES256", kid: env.APNS_KEY_ID }));
+  const claims = base64Url(JSON.stringify({ iss: env.APNS_TEAM_ID, iat: now }));
+  const unsignedToken = `${header}.${claims}`;
+  const signingKey = await crypto.subtle.importKey(
+    "pkcs8",
+    privateKeyBytes(privateKey),
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    signingKey,
+    encoder.encode(unsignedToken),
+  );
+  const value = `${unsignedToken}.${base64Url(signature)}`;
+  cachedProviderToken = { value, issuedAt: now };
+  return value;
+}
+
+async function disablePushDevice(env: Env, token: string) {
+  await env.DB.prepare(
+    `UPDATE push_devices
+     SET disabled_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+     WHERE token = ?1`,
+  ).bind(token).run();
+}
+
+async function sendStateChangeNotification(
+  env: Env,
+  authorization: string,
+  device: PushDeviceRow,
+) {
+  const host = device.environment === "sandbox"
+    ? "https://api.sandbox.push.apple.com"
+    : "https://api.push.apple.com";
+  const response = await fetch(`${host}/3/device/${device.token}`, {
+    method: "POST",
+    headers: {
+      authorization: `bearer ${authorization}`,
+      "apns-topic": env.APNS_TOPIC,
+      "apns-push-type": "background",
+      "apns-priority": "5",
+      "apns-expiration": "0",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      aps: { "content-available": 1 },
+      enzo: "state-changed",
+    }),
+  });
+  if (response.ok) return;
+
+  const failure = await response
+    .json<{ reason?: string }>()
+    .catch((): { reason?: string } => ({}));
+  if (
+    response.status === 410
+    || failure.reason === "BadDeviceToken"
+    || failure.reason === "DeviceTokenNotForTopic"
+    || failure.reason === "Unregistered"
+  ) {
+    await disablePushDevice(env, device.token);
+  }
+  console.log(JSON.stringify({
+    level: "error",
+    message: "APNs notification failed",
+    environment: device.environment,
+    status: response.status,
+    reason: failure.reason ?? "Unknown",
+  }));
+}
+
+async function sendStateChangeNotifications(env: Env) {
+  const { results } = await env.DB.prepare(
+    `SELECT token, environment
+     FROM push_devices
+     WHERE disabled_at IS NULL`,
+  ).all<PushDeviceRow>();
+  if (results.length === 0) return;
+
+  const authorization = await providerToken(env);
+  await Promise.all(
+    results.map((device) => sendStateChangeNotification(env, authorization, device)),
+  );
+}
+
+function notifyStateChange(env: Env, ctx: ExecutionContext) {
+  ctx.waitUntil(
+    sendStateChangeNotifications(env).catch((error) => {
+      const message = error instanceof Error ? error.message : "APNs notification failed";
+      console.log(JSON.stringify({ level: "error", message }));
+    }),
+  );
+}
+
+
+async function handleApi(request: Request, url: URL, env: Env, ctx: ExecutionContext) {
   if (request.method === "GET" && url.pathname === "/api/health") {
     const row = await env.DB.prepare("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now') AS now")
       .first<{ now: string }>();
@@ -273,6 +416,32 @@ async function handleApi(request: Request, url: URL, env: Env) {
 
   if (request.method === "GET" && url.pathname === "/api/state") {
     return json(await readState(env));
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/push-devices") {
+    try {
+      const body = await request.json() as Record<string, unknown>;
+      const token = typeof body.token === "string" ? body.token.toLowerCase() : "";
+      const environment = body.environment;
+      if (!/^[0-9a-f]{64}$/.test(token)) {
+        throw new Error("token must be a 64-character hexadecimal APNs device token");
+      }
+      if (environment !== "sandbox" && environment !== "production") {
+        throw new Error("environment must be sandbox or production");
+      }
+      await env.DB.prepare(
+        `INSERT INTO push_devices (token, environment)
+         VALUES (?1, ?2)
+         ON CONFLICT (token) DO UPDATE SET
+           environment = excluded.environment,
+           disabled_at = NULL,
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
+      ).bind(token, environment).run();
+      return json({ ok: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid push device";
+      return json({ ok: false, error: message }, { status: 400 });
+    }
   }
 
   if (request.method === "POST" && url.pathname === "/api/events") {
@@ -287,6 +456,7 @@ async function handleApi(request: Request, url: URL, env: Env) {
         event.id, event.occurredAt, event.type, event.milkType, event.amountMl,
         event.pee ? 1 : 0, event.poop ? 1 : 0, event.resetsTimer ? 1 : 0, event.notes,
       ).run();
+      if (result.meta.changes > 0) notifyStateChange(env, ctx);
       return json(
         await mutationResponse(env, event.id),
         { status: result.meta.changes > 0 ? 201 : 200 },
@@ -318,6 +488,7 @@ async function handleApi(request: Request, url: URL, env: Env) {
         event.occurredAt, event.milkType, event.amountMl, event.pee ? 1 : 0,
         event.poop ? 1 : 0, event.resetsTimer ? 1 : 0, event.notes, id,
       ).run();
+      notifyStateChange(env, ctx);
       return json(await mutationResponse(env, id));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Invalid update";
@@ -334,17 +505,65 @@ async function handleApi(request: Request, url: URL, env: Env) {
        WHERE id = ?1 AND deleted_at IS NULL`,
     ).bind(id).run();
     if (result.meta.changes === 0) return json({ error: "Event not found" }, { status: 404 });
+    notifyStateChange(env, ctx);
     return json(await mutationResponse(env, id));
   }
 
-  if (request.method === "PUT" && url.pathname === "/api/profile") {
+  if (
+    (request.method === "PUT" || request.method === "PATCH")
+    && url.pathname === "/api/profile"
+  ) {
     try {
       const body = await request.json() as Record<string, unknown>;
-      const birthAt = parseOccurredAt(body.birthAt);
-      if (birthAt > new Date().toISOString()) throw new Error("birthAt must be in the past");
-      await env.DB.prepare(
-        `UPDATE profile SET birth_at = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = 1`,
-      ).bind(birthAt).run();
+      const hasBirthAt = Object.hasOwn(body, "birthAt");
+      const hasFeedInterval = Object.hasOwn(body, "feedIntervalMinutes");
+      if (!hasBirthAt && !hasFeedInterval) {
+        throw new Error("birthAt or feedIntervalMinutes is required");
+      }
+
+      const birthAt = hasBirthAt ? parseOccurredAt(body.birthAt) : null;
+      if (birthAt && birthAt > new Date().toISOString()) {
+        throw new Error("birthAt must be in the past");
+      }
+
+      const feedIntervalMinutes = hasFeedInterval
+        ? Number(body.feedIntervalMinutes)
+        : null;
+      if (
+        hasFeedInterval
+        && (
+          !Number.isInteger(feedIntervalMinutes)
+          || feedIntervalMinutes! < 30
+          || feedIntervalMinutes! > 720
+        )
+      ) {
+        throw new Error("feedIntervalMinutes must be between 30 and 720");
+      }
+
+      if (birthAt && feedIntervalMinutes !== null) {
+        await env.DB.prepare(
+          `UPDATE profile SET
+             birth_at = ?1,
+             feed_interval_minutes = ?2,
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+           WHERE id = 1`,
+        ).bind(birthAt, feedIntervalMinutes).run();
+      } else if (birthAt) {
+        await env.DB.prepare(
+          `UPDATE profile SET
+             birth_at = ?1,
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+           WHERE id = 1`,
+        ).bind(birthAt).run();
+      } else {
+        await env.DB.prepare(
+          `UPDATE profile SET
+             feed_interval_minutes = ?1,
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+           WHERE id = 1`,
+        ).bind(feedIntervalMinutes).run();
+      }
+      notifyStateChange(env, ctx);
       return json({ ok: true, state: await readState(env) });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Invalid profile";
@@ -363,6 +582,7 @@ async function handleApi(request: Request, url: URL, env: Env) {
          VALUES (?1, ?2, ?3, ${placeholders})
          ON CONFLICT (id) DO NOTHING`,
       ).bind(checkup.id, checkup.occurredAt, checkup.notes, ...values).run();
+      if (result.meta.changes > 0) notifyStateChange(env, ctx);
       return json(
         { ok: true, checkupId: checkup.id, state: await readState(env) },
         { status: result.meta.changes > 0 ? 201 : 200 },
@@ -389,6 +609,7 @@ async function handleApi(request: Request, url: URL, env: Env) {
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
          WHERE id = ?1`,
       ).bind(id, checkup.occurredAt, checkup.notes, ...values).run();
+      notifyStateChange(env, ctx);
       return json({ ok: true, checkupId: id, state: await readState(env) });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Invalid checkup";
@@ -405,6 +626,7 @@ async function handleApi(request: Request, url: URL, env: Env) {
        WHERE id = ?1 AND deleted_at IS NULL`,
     ).bind(id).run();
     if (result.meta.changes === 0) return json({ error: "Checkup not found" }, { status: 404 });
+    notifyStateChange(env, ctx);
     return json({ ok: true, checkupId: id, state: await readState(env) });
   }
 
@@ -412,7 +634,7 @@ async function handleApi(request: Request, url: URL, env: Env) {
 }
 
 export default {
-  async fetch(request, env): Promise<Response> {
+  async fetch(request, env, ctx): Promise<Response> {
     const url = new URL(request.url);
     if (!url.pathname.startsWith("/api/")) {
       return new Response("Not found", { status: 404 });
@@ -421,7 +643,7 @@ export default {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
     try {
-      return await handleApi(request, url, env);
+      return await handleApi(request, url, env, ctx);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Database error";
       console.log(JSON.stringify({ level: "error", message }));

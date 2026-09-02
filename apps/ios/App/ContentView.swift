@@ -51,7 +51,7 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        settingsRoute = .profile
+                        settingsRoute = .settings
                     } label: {
                         ZStack(alignment: .topTrailing) {
                             Image(systemName: "gearshape")
@@ -102,8 +102,8 @@ struct ContentView: View {
             }
             .sheet(item: $settingsRoute) { route in
                 switch route {
-                case .profile:
-                    ProfileSettingsView(model: model)
+                case .settings:
+                    SettingsIndexView(model: model)
                         .presentationDetents([.large])
                         .presentationDragIndicator(.visible)
                 case .goals:
@@ -611,7 +611,7 @@ struct DiaperGlyph: View {
 }
 
 private enum SettingsRoute: String, Identifiable {
-    case profile
+    case settings
     case goals
     case eventLog
 
