@@ -47,4 +47,32 @@ final class AlarmTriggerCalculatorTests: XCTestCase {
         )
         XCTAssertEqual(trigger, dueAt.addingTimeInterval(-180 * 60))
     }
+
+    func testOverdueFeedDoesNotProduceAnAlarmSchedule() {
+        let timing = AlarmTriggerCalculator.scheduleTiming(
+            dueAt: now.addingTimeInterval(-60),
+            leadMinutes: 0,
+            now: now
+        )
+
+        XCTAssertNil(timing)
+    }
+
+    func testUpcomingImmediateScheduleKeepsAStableDesiredDate() throws {
+        let dueAt = now.addingTimeInterval(5 * 60)
+        let first = try XCTUnwrap(AlarmTriggerCalculator.scheduleTiming(
+            dueAt: dueAt,
+            leadMinutes: 15,
+            now: now
+        ))
+        let second = try XCTUnwrap(AlarmTriggerCalculator.scheduleTiming(
+            dueAt: dueAt,
+            leadMinutes: 15,
+            now: now.addingTimeInterval(30)
+        ))
+
+        XCTAssertEqual(first.desiredDate, dueAt.addingTimeInterval(-15 * 60))
+        XCTAssertEqual(second.desiredDate, first.desiredDate)
+        XCTAssertNotEqual(second.scheduledDate, first.scheduledDate)
+    }
 }

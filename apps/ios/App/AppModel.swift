@@ -2,6 +2,19 @@ import Foundation
 import Observation
 import WidgetKit
 
+struct ServerStateRequestGate {
+    private var latestRequest = 0
+
+    mutating func beginRequest() -> Int {
+        latestRequest += 1
+        return latestRequest
+    }
+
+    func accepts(_ request: Int) -> Bool {
+        request == latestRequest
+    }
+}
+
 @MainActor
 @Observable
 final class AppModel {
@@ -63,12 +76,14 @@ final class AppModel {
         guard let state,
               let waiting = waitingActivity(for: state),
               !isAlarmAcknowledged(waiting) else { return nil }
-        let trigger = AlarmTriggerCalculator.triggerDate(
+        guard let timing = AlarmTriggerCalculator.scheduleTiming(
             dueAt: waiting.nextFeedAt,
             leadMinutes: alarmLeadMinutes,
             now: now
-        )
-        return feedAlarmSettings.allowsAlarm(at: trigger) ? trigger : nil
+        ) else { return nil }
+        return feedAlarmSettings.allowsAlarm(at: timing.scheduledDate)
+            ? timing.scheduledDate
+            : nil
     }
 
     var currentFeedAlarmAcknowledged: Bool {
@@ -85,6 +100,7 @@ final class AppModel {
     private let activities = ActivityService()
     private let alarms = AlarmService()
     private let alarmSettingsStore: AlarmSettingsStore
+    private var stateRequestGate = ServerStateRequestGate()
 
     init(
         defaults: UserDefaults = .standard,
@@ -104,8 +120,9 @@ final class AppModel {
     }
 
     func saveBirthDate(_ birthAt: Date) async {
-        await perform {
+        await perform { request in
             let response = try await api.updateBirthDate(birthAt)
+            guard stateRequestGate.accepts(request) else { return }
             state = response.state
             let warning = await reconcileSystemSurfaces(for: response.state)
             status = mutationStatus("Birthday saved", response: response, surfaceWarning: warning)
@@ -115,8 +132,9 @@ final class AppModel {
     func saveFeedIntervalMinutes(_ minutes: Int) async {
         guard FeedIntervalFormatting.options.contains(minutes),
               minutes != defaultFeedIntervalMinutes else { return }
-        await perform {
+        await perform { request in
             let response = try await api.updateFeedIntervalMinutes(minutes)
+            guard stateRequestGate.accepts(request) else { return }
             state = response.state
             let warning = await reconcileSystemSurfaces(for: response.state)
             status = mutationStatus(
@@ -128,8 +146,9 @@ final class AppModel {
     }
 
     func saveCheckup(_ checkup: Checkup, isNew: Bool) async {
-        await perform {
+        await perform { request in
             let response = try await (isNew ? api.createCheckup(checkup) : api.updateCheckup(checkup))
+            guard stateRequestGate.accepts(request) else { return }
             state = response.state
             let warning = await reconcileSystemSurfaces(for: response.state)
             status = mutationStatus(isNew ? "Checkup added" : "Checkup updated", response: response, surfaceWarning: warning)
@@ -137,8 +156,9 @@ final class AppModel {
     }
 
     func deleteCheckup(id: String) async {
-        await perform {
+        await perform { request in
             let response = try await api.deleteCheckup(id: id)
+            guard stateRequestGate.accepts(request) else { return }
             state = response.state
             let warning = await reconcileSystemSurfaces(for: response.state)
             status = mutationStatus("Checkup deleted", response: response, surfaceWarning: warning)
@@ -186,7 +206,10 @@ final class AppModel {
         successStatus: String,
         canRequestActivity: Bool = true
     ) async throws {
+        guard !isBusy else { return }
+        let request = stateRequestGate.beginRequest()
         let syncedState = try await api.state()
+        guard stateRequestGate.accepts(request) else { return }
         state = syncedState
         if let warning = await reconcileSystemSurfaces(
             for: syncedState,
@@ -264,8 +287,9 @@ final class AppModel {
     }
 
     func saveFeed(_ draft: FeedDraft) async {
-        await perform {
+        await perform { request in
             let response = try await (draft.eventID == nil ? api.createFeed(draft) : api.updateFeed(draft))
+            guard stateRequestGate.accepts(request) else { return }
             state = response.state
             let surfaceWarning = await reconcileSystemSurfaces(for: response.state)
             status = mutationStatus(
@@ -277,8 +301,9 @@ final class AppModel {
     }
 
     func saveDiaper(_ draft: DiaperDraft) async {
-        await perform {
+        await perform { request in
             let response = try await (draft.eventID == nil ? api.createDiaper(draft) : api.updateDiaper(draft))
+            guard stateRequestGate.accepts(request) else { return }
             state = response.state
             let surfaceWarning = await reconcileSystemSurfaces(for: response.state)
             status = mutationStatus(
@@ -290,8 +315,9 @@ final class AppModel {
     }
 
     func deleteEvent(id: String) async {
-        await perform {
+        await perform { request in
             let response = try await api.deleteEvent(id: id)
+            guard stateRequestGate.accepts(request) else { return }
             state = response.state
             let surfaceWarning = await reconcileSystemSurfaces(for: response.state)
             status = mutationStatus(
@@ -418,11 +444,12 @@ final class AppModel {
         return "\(success); \(surfaceWarning)"
     }
 
-    private func perform(_ work: () async throws -> Void) async {
+    private func perform(_ work: (Int) async throws -> Void) async {
         guard !isBusy else { return }
         isBusy = true
+        let request = stateRequestGate.beginRequest()
         defer { isBusy = false }
-        do { try await work() }
+        do { try await work(request) }
         catch { status = "Couldn't save: \(error.localizedDescription)" }
     }
 }

@@ -22,11 +22,14 @@
 		592624D40DA85A3A4366EC78 /* DailyReferenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A8C1AF1F87371C8EA162A6 /* DailyReferenceTests.swift */; };
 		69D0FB48C0312DFB8484E36D /* AlarmReconciliationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 658791B3A533E9E7F53B9DD0 /* AlarmReconciliationPolicy.swift */; };
 		6AB864C85533946721D51714 /* EnzoLiveActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2319649500C3DE8D6F41649 /* EnzoLiveActivityBundle.swift */; };
+		82A20109942CE8E90673CEDD /* AlarmRuntimeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D181FB2BEFF772206F11A551 /* AlarmRuntimeStore.swift */; };
 		88F983E545C7071B2EB28082 /* WidgetSnapshotRefreshTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C8ECF0F71867EA6CCB33427 /* WidgetSnapshotRefreshTests.swift */; };
+		8963FE81142C91507BA4AD9F /* AlarmRuntimeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D181FB2BEFF772206F11A551 /* AlarmRuntimeStore.swift */; };
 		8AB109AA059E3C4871DC3A75 /* FeedAlarmSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FCBB7C5DDA352AD5B96501C /* FeedAlarmSettingsTests.swift */; };
 		93522CC73569F41CAEDFCD90 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB4A47335A74F68062554F90 /* Models.swift */; };
 		94A605C5F6A020974F034E7B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5728876A6A1D4311ABA3AE /* ContentView.swift */; };
 		9DE61F6320F808717320A826 /* LiveActivityReconciliationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 344440705FA51B09CAB776A1 /* LiveActivityReconciliationPolicy.swift */; };
+		A0EC6C7FA6539A5B88F3DBCE /* ServerStateRequestGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D6C34A8283442F308B26CC7 /* ServerStateRequestGateTests.swift */; };
 		AC258262531902CA478AE6CD /* EnzoBell.wav in Resources */ = {isa = PBXBuildFile; fileRef = 423D8246816F710755DF1157 /* EnzoBell.wav */; };
 		AF66371B62CDB1EA283CC585 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 084F5D344F5145DDC217A0FE /* AppModel.swift */; };
 		B129472D72DC8C58E3FDCCA9 /* EnzoGentleChime.wav in Resources */ = {isa = PBXBuildFile; fileRef = 86CAE424A0634BC06CB03AA5 /* EnzoGentleChime.wav */; };
@@ -108,6 +111,7 @@
 		6B5728876A6A1D4311ABA3AE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		75FC6D130E27158886AFD640 /* Enzo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Enzo.entitlements; sourceTree = "<group>"; };
 		7ACE61A169550810BB7DC844 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
+		7D6C34A8283442F308B26CC7 /* ServerStateRequestGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerStateRequestGateTests.swift; sourceTree = "<group>"; };
 		86CAE424A0634BC06CB03AA5 /* EnzoGentleChime.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = EnzoGentleChime.wav; sourceTree = "<group>"; };
 		8CB3464049165C3CEF2FE893 /* AlarmReconciliationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmReconciliationPolicyTests.swift; sourceTree = "<group>"; };
 		8E81852D6032E666B9F5FBE9 /* FeedLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedLiveActivity.swift; sourceTree = "<group>"; };
@@ -119,6 +123,7 @@
 		AF83C8401CF13E2951424695 /* EnzoPrototypeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnzoPrototypeApp.swift; sourceTree = "<group>"; };
 		B2319649500C3DE8D6F41649 /* EnzoLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnzoLiveActivityBundle.swift; sourceTree = "<group>"; };
 		BB856CF1FBD7B755AFFD689D /* VolumeUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeUnit.swift; sourceTree = "<group>"; };
+		D181FB2BEFF772206F11A551 /* AlarmRuntimeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmRuntimeStore.swift; sourceTree = "<group>"; };
 		DE5E98FC58FD0162CB41272E /* EnzoTodayWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnzoTodayWidget.swift; sourceTree = "<group>"; };
 		E295D7571127A13C2C55A383 /* LiveActivityReconciliationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityReconciliationPolicyTests.swift; sourceTree = "<group>"; };
 		E3A8C1AF1F87371C8EA162A6 /* DailyReferenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyReferenceTests.swift; sourceTree = "<group>"; };
@@ -179,6 +184,7 @@
 		AE892DEEE0F890DD7846728F /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				D181FB2BEFF772206F11A551 /* AlarmRuntimeStore.swift */,
 				39341FC934A61DD7BF70E0CD /* Assets.xcassets */,
 				EA6632FF24E498D1DCBBC3D6 /* FeedActivityAttributes.swift */,
 				BB856CF1FBD7B755AFFD689D /* VolumeUnit.swift */,
@@ -219,6 +225,7 @@
 				E3A8C1AF1F87371C8EA162A6 /* DailyReferenceTests.swift */,
 				5FCBB7C5DDA352AD5B96501C /* FeedAlarmSettingsTests.swift */,
 				E295D7571127A13C2C55A383 /* LiveActivityReconciliationPolicyTests.swift */,
+				7D6C34A8283442F308B26CC7 /* ServerStateRequestGateTests.swift */,
 				3C8ECF0F71867EA6CCB33427 /* WidgetSnapshotRefreshTests.swift */,
 			);
 			path = Tests;
@@ -356,6 +363,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8963FE81142C91507BA4AD9F /* AlarmRuntimeStore.swift in Sources */,
 				6AB864C85533946721D51714 /* EnzoLiveActivityBundle.swift in Sources */,
 				1E11C2CCCCCA24437B609CC4 /* EnzoTodayWidget.swift in Sources */,
 				B3FDFBC53ACB0EE7999CFD52 /* FeedActivityAttributes.swift in Sources */,
@@ -376,6 +384,7 @@
 				592624D40DA85A3A4366EC78 /* DailyReferenceTests.swift in Sources */,
 				8AB109AA059E3C4871DC3A75 /* FeedAlarmSettingsTests.swift in Sources */,
 				EA43428CE3DD9E96E5A74321 /* LiveActivityReconciliationPolicyTests.swift in Sources */,
+				A0EC6C7FA6539A5B88F3DBCE /* ServerStateRequestGateTests.swift in Sources */,
 				88F983E545C7071B2EB28082 /* WidgetSnapshotRefreshTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -388,6 +397,7 @@
 				3C84FC3FC98D80AF6BFCE611 /* ActivityService.swift in Sources */,
 				47ACBE990F07944CFC82D99B /* AlarmAcknowledgement.swift in Sources */,
 				69D0FB48C0312DFB8484E36D /* AlarmReconciliationPolicy.swift in Sources */,
+				82A20109942CE8E90673CEDD /* AlarmRuntimeStore.swift in Sources */,
 				C23E237D68CEDFE97E985D3B /* AlarmService.swift in Sources */,
 				B92E780A11FD49AACE720163 /* AlarmTriggerCalculator.swift in Sources */,
 				AF66371B62CDB1EA283CC585 /* AppModel.swift in Sources */,
@@ -534,7 +544,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2026.9.7;
+				CURRENT_PROJECT_VERSION = 2026.9.8;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3B468RG7H6;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -594,7 +604,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2026.9.7;
+				CURRENT_PROJECT_VERSION = 2026.9.8;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3B468RG7H6;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

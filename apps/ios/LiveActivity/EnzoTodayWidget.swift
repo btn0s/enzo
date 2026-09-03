@@ -54,6 +54,7 @@ private struct SnapshotProvider: TimelineProvider {
                 try await WidgetRemoteClient().state()
             }.refresh(cached: cached)
             if let snapshot {
+                try? AlarmRuntimeStore.cancelIfStale(remoteDueAt: snapshot.nextFeedAt)
                 WidgetSnapshotStore.save(snapshot)
             }
 

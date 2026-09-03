@@ -20,6 +20,7 @@ struct AlarmReconciliationPolicy {
     func plan(
         desiredEventID: String?,
         desiredDate: Date?,
+        scheduledDate: Date? = nil,
         desiredDueAt: Date? = nil,
         storedAlarmID: UUID?,
         storedDesiredDate: Date? = nil,
@@ -42,6 +43,7 @@ struct AlarmReconciliationPolicy {
                 schedule: nil
             )
         }
+        let scheduleDate = scheduledDate ?? desiredDate
 
         let storedAlarm = alarms.first { $0.id == storedAlarmID }
         let reusable: AlarmDescriptor?
@@ -56,7 +58,7 @@ struct AlarmReconciliationPolicy {
             keepID: reusable?.id,
             cancelIDs: alarms.filter { $0.id != reusable?.id }.map(\.id),
             schedule: reusable == nil
-                ? AlarmScheduleRequest(eventID: desiredEventID, date: desiredDate)
+                ? AlarmScheduleRequest(eventID: desiredEventID, date: scheduleDate)
                 : nil
         )
     }

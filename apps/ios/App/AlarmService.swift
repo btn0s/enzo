@@ -42,10 +42,12 @@ actor AlarmService {
         settings: FeedAlarmSettings
     ) async throws {
         let manager = AlarmManager.shared
-        let feedTrigger = dueAt.map {
-            AlarmTriggerCalculator.triggerDate(
+        let now = Date()
+        let feedTiming = dueAt.flatMap {
+            AlarmTriggerCalculator.scheduleTiming(
                 dueAt: $0,
-                leadMinutes: settings.leadMinutes
+                leadMinutes: settings.leadMinutes,
+                now: now
             )
         }
         let storedAlarmID = AlarmRuntimeStore.alarmID
@@ -54,10 +56,22 @@ actor AlarmService {
         let storedSourceDueAt = AlarmRuntimeStore.sourceDueAt
         let storedConfiguration = AlarmRuntimeStore.configurationSignature
         let storedIsReminder = AlarmRuntimeStore.isReminder
+        let storedDesiredDate = AlarmRuntimeStore.desiredDate
+            ?? (storedIsReminder
+                ? storedScheduledDate
+                : storedSourceDueAt.map {
+                    AlarmTriggerCalculator.desiredDate(
+                        dueAt: $0,
+                        leadMinutes: settings.leadMinutes
+                    )
+                })
         let hasStoredAlarmForEvent = storedAlarmID != nil && storedEventID == eventID
         let mayNeedAlarm = settings.enabled
             && eventID != nil
-            && (feedTrigger.map { settings.allowsAlarm(at: $0) } == true || hasStoredAlarmForEvent)
+            && (
+                feedTiming.map { settings.allowsAlarm(at: $0.scheduledDate) } == true
+                    || hasStoredAlarmForEvent
+            )
 
         // AlarmManager.alarms throws before authorization. Request permission
         // only when the current state may need an alarm.
@@ -101,13 +115,17 @@ actor AlarmService {
             isReminder: storedIsReminder,
             hasStoredAlarm: storedAlarm != nil
         )
-        let targetDate = continuesReminder
+        let targetDesiredDate = continuesReminder
+            ? storedDesiredDate
+            : feedTiming?.desiredDate
+        let targetScheduledDate = continuesReminder
             ? storedAlarm?.fixedDate ?? storedScheduledDate
-            : feedTrigger
-        let shouldSchedule = targetDate.map { settings.allowsAlarm(at: $0) } ?? false
+            : feedTiming?.scheduledDate
+        let shouldSchedule = targetScheduledDate.map {
+            $0 > now && settings.allowsAlarm(at: $0)
+        } ?? false
         if continuesReminder,
            settings.enabled,
-           settings.activeHoursEnabled,
            !shouldSchedule,
            let eventID {
             AlarmAcknowledgementStore.acknowledge(
@@ -121,10 +139,11 @@ actor AlarmService {
         }
         let plan = policy.plan(
             desiredEventID: eventID,
-            desiredDate: targetDate,
+            desiredDate: targetDesiredDate,
+            scheduledDate: targetScheduledDate,
             desiredDueAt: dueAt,
             storedAlarmID: storedAlarmID,
-            storedDesiredDate: storedScheduledDate,
+            storedDesiredDate: storedDesiredDate,
             acknowledgedEventID: AlarmAcknowledgementStore.eventID,
             acknowledgedDueAt: AlarmAcknowledgementStore.dueAt,
             isEnabled: shouldSchedule,
@@ -132,17 +151,21 @@ actor AlarmService {
             alarms: descriptors
         )
 
-        for alarmID in plan.cancelIDs {
-            try manager.cancel(id: alarmID)
-            logger.info("Cancelled obsolete feed alarm \(alarmID, privacy: .public)")
+        try await cancelAlarms(plan.cancelIDs, manager: manager)
+        if let storedAlarmID, plan.cancelIDs.contains(storedAlarmID) {
+            clearStoredAlarm()
         }
 
         if let keepID = plan.keepID {
-            if let targetDate, let eventID, let dueAt {
+            if let targetDesiredDate,
+               let targetScheduledDate,
+               let eventID,
+               let dueAt {
                 AlarmRuntimeStore.save(
                     alarmID: keepID,
                     eventID: eventID,
-                    scheduledDate: targetDate,
+                    scheduledDate: targetScheduledDate,
+                    desiredDate: targetDesiredDate,
                     sourceDueAt: dueAt,
                     configurationSignature: settings.configurationSignature,
                     isReminder: continuesReminder
@@ -152,7 +175,9 @@ actor AlarmService {
             return
         }
 
-        guard let request = plan.schedule, let dueAt else {
+        guard let request = plan.schedule,
+              let targetDesiredDate,
+              let dueAt else {
             clearStoredAlarm()
             return
         }
@@ -174,6 +199,7 @@ actor AlarmService {
             alarmID: alarmID,
             eventID: request.eventID,
             scheduledDate: request.date,
+            desiredDate: targetDesiredDate,
             sourceDueAt: dueAt,
             configurationSignature: settings.configurationSignature,
             isReminder: continuesReminder
@@ -214,6 +240,7 @@ actor AlarmService {
             alarmID: alarmID,
             eventID: eventID,
             scheduledDate: date,
+            desiredDate: date,
             sourceDueAt: sourceDueAt,
             configurationSignature: settings.configurationSignature,
             isReminder: true
@@ -261,15 +288,8 @@ actor AlarmService {
             _ = try await manager.schedule(id: id, configuration: configuration)
         } catch AlarmManager.AlarmError.maximumLimitReached {
             let appAlarms = try manager.alarms
-            for alarm in appAlarms {
-                try manager.cancel(id: alarm.id)
-                logger.info("Cancelled alarm \(alarm.id, privacy: .public) while recovering alarm capacity")
-            }
+            try await cancelAlarms(appAlarms.map(\.id), manager: manager)
             clearStoredAlarm()
-
-            // AlarmKit cancellation is asynchronous internally; give it a
-            // moment to release capacity before the single retry.
-            try await Task.sleep(for: .milliseconds(250))
             do {
                 _ = try await manager.schedule(id: id, configuration: configuration)
             } catch AlarmManager.AlarmError.maximumLimitReached {
@@ -277,6 +297,36 @@ actor AlarmService {
             }
         }
     }
+    private func cancelAlarms(
+        _ alarmIDs: [UUID],
+        manager: AlarmManager
+    ) async throws {
+        let requestedIDs = Set(alarmIDs)
+        guard !requestedIDs.isEmpty else { return }
+
+        for alarmID in requestedIDs {
+            try? manager.cancel(id: alarmID)
+        }
+
+        for attempt in 0..<3 {
+            let remainingIDs = Set(try manager.alarms.map(\.id))
+                .intersection(requestedIDs)
+            if remainingIDs.isEmpty {
+                for alarmID in requestedIDs {
+                    logger.info("Cancelled obsolete feed alarm \(alarmID, privacy: .public)")
+                }
+                return
+            }
+            guard attempt < 2 else {
+                throw FeedingAlarmError.cancellationFailed
+            }
+            try await Task.sleep(for: .milliseconds(100))
+            for alarmID in remainingIDs {
+                try? manager.cancel(id: alarmID)
+            }
+        }
+    }
+
 
     private func acquireOperation() async {
         if !operationInProgress {
@@ -378,6 +428,7 @@ private extension Alarm {
 enum FeedingAlarmError: LocalizedError {
     case authorizationDenied
     case maximumLimitReached
+    case cancellationFailed
 
     var errorDescription: String? {
         switch self {
@@ -385,6 +436,8 @@ enum FeedingAlarmError: LocalizedError {
             "Alarm permission is off. Enable Alarms for Enzo in Settings."
         case .maximumLimitReached:
             "The system alarm limit is full. Try scheduling the feed alarm again in a moment."
+        case .cancellationFailed:
+            "An outdated alarm could not be removed. Open Enzo and try again."
         }
     }
 }

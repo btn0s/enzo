@@ -147,6 +147,22 @@ final class AlarmReconciliationPolicyTests: XCTestCase {
         XCTAssertNil(plan.schedule)
     }
 
+    func testSchedulesImmediateDateUsingStableDesiredDate() {
+        let immediateDate = dueAt.addingTimeInterval(10 * 60)
+        let plan = policy.plan(
+            desiredEventID: "feed-midnight",
+            desiredDate: dueAt,
+            scheduledDate: immediateDate,
+            storedAlarmID: nil,
+            alarms: []
+        )
+
+        XCTAssertEqual(
+            plan.schedule,
+            AlarmScheduleRequest(eventID: "feed-midnight", date: immediateDate)
+        )
+    }
+
     func testConfigurationChangeReplacesMatchingAlarm() {
         let alarmID = UUID()
         let plan = policy.plan(
