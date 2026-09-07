@@ -79,11 +79,13 @@ struct ServerEvent: Decodable, Identifiable, Hashable {
     }
 }
 
-struct TodaySummary: Decodable {
+struct DailySummary: Decodable, Equatable {
     let milkMl: Double
     let feeds: Int
     let pees: Int
     let poops: Int
+
+    static let empty = DailySummary(milkMl: 0, feeds: 0, pees: 0, poops: 0)
 }
 
 struct Profile: Decodable, Hashable {
@@ -118,23 +120,68 @@ struct Checkup: Codable, Identifiable, Hashable {
 }
 
 struct ServerState: Decodable {
+    let timezone: String
+    let now: Date
     let nextFeedAt: Date?
     let intervalMinutes: Int
     let profile: Profile
     let checkups: [Checkup]
     let activeCheckupId: String?
-    let today: TodaySummary
+    let today: DailySummary
     let events: [ServerEvent]
 
-    /// Latest checkup that has already happened.
-    var activeCheckup: Checkup? {
-        activeCheckupId.flatMap { id in checkups.first { $0.id == id } }
+    var careCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: timezone) ?? .current
+        return calendar
     }
 
-    /// Most recent recorded weight from any past checkup.
+    /// Latest checkup that had happened by the supplied time.
+    func activeCheckup(at date: Date) -> Checkup? {
+        checkups.first { $0.occurredAt <= date }
+    }
+
+    /// Most recent weight that had been recorded by the supplied time.
+    func currentWeightKg(at date: Date) -> Double? {
+        checkups.first { $0.occurredAt <= date && $0.weightKg != nil }?.weightKg
+    }
+
+    var activeCheckup: Checkup? {
+        activeCheckup(at: now)
+    }
+
     var currentWeightKg: Double? {
-        let now = Date()
-        return checkups.first { $0.occurredAt <= now && $0.weightKg != nil }?.weightKg
+        currentWeightKg(at: now)
+    }
+
+    func summary(on date: Date) -> DailySummary {
+        let calendar = careCalendar
+        if calendar.isDate(date, inSameDayAs: now) {
+            return today
+        }
+
+        var milkMl = 0.0
+        var feeds = 0
+        var pees = 0
+        var poops = 0
+
+        for event in events where calendar.isDate(event.occurredAt, inSameDayAs: date) {
+            switch event.content {
+            case .feed(let feed):
+                feeds += 1
+                milkMl += feed.amountMl ?? 0
+            case .diaper(let diaper):
+                if diaper.pee { pees += 1 }
+                if diaper.poop { poops += 1 }
+            }
+        }
+
+        return DailySummary(
+            milkMl: milkMl,
+            feeds: feeds,
+            pees: pees,
+            poops: poops
+        )
     }
 }
 

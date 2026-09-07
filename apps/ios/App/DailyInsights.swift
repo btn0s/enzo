@@ -23,6 +23,7 @@ enum PaceStatus {
     case belowPace
     case onPace
     case goalMet
+    case goalNotMet
     case tracking
 }
 
@@ -214,6 +215,12 @@ enum DailyReference {
         if current >= goal { return .goalMet }
         let expected = goal * progressThroughDay(now, calendar: calendar)
         return current + slack >= expected ? .onPace : .belowPace
+    }
+
+    /// Final status for a completed day; unlike pace, there is no remaining time.
+    static func completion(current: Double, goal: Double?) -> PaceStatus {
+        guard let goal else { return .tracking }
+        return current >= goal ? .goalMet : .goalNotMet
     }
 
     private static func progressThroughDay(_ now: Date, calendar: Calendar) -> Double {

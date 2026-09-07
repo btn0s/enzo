@@ -52,6 +52,77 @@ final class DailyReferenceTests: XCTestCase {
         XCTAssertEqual(DailyReference.pace(current: 0, goal: nil, slack: 0.5, now: noon, calendar: calendar), .tracking)
     }
 
+    func testCompletedDayDistinguishesMetAndMissedGoals() {
+        XCTAssertEqual(DailyReference.completion(current: 8, goal: 8), .goalMet)
+        XCTAssertEqual(DailyReference.completion(current: 7, goal: 8), .goalNotMet)
+        XCTAssertEqual(DailyReference.completion(current: 0, goal: nil), .tracking)
+    }
+
+    func testHistoricalSummaryUsesServerTimezoneAndCountsCombinedDiaper() throws {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let events = try [
+            #"{"id":"prior","occurredAt":"2026-09-01T03:30:00Z","type":"feed","feed":{"milkType":"formula","amountMl":30,"resetsTimer":true},"notes":""}"#,
+            #"{"id":"feed","occurredAt":"2026-09-01T04:30:00Z","type":"feed","feed":{"milkType":"formula","amountMl":60,"resetsTimer":true},"notes":""}"#,
+            #"{"id":"diaper","occurredAt":"2026-09-01T05:00:00Z","type":"diaper","diaper":{"pee":true,"poop":true},"notes":""}"#,
+        ].map { json in
+            try decoder.decode(ServerEvent.self, from: Data(json.utf8))
+        }
+        let selectedDay = calendar.date(
+            from: DateComponents(year: 2026, month: 9, day: 1, hour: 12)
+        )!
+        let serverNow = calendar.date(
+            from: DateComponents(year: 2026, month: 9, day: 2, hour: 12)
+        )!
+        let state = ServerState(
+            timezone: "America/New_York",
+            now: serverNow,
+            nextFeedAt: nil,
+            intervalMinutes: 120,
+            profile: Profile(birthAt: birth, feedIntervalMinutes: 120),
+            checkups: [],
+            activeCheckupId: nil,
+            today: .empty,
+            events: events
+        )
+
+        XCTAssertEqual(
+            state.summary(on: selectedDay),
+            DailySummary(milkMl: 60, feeds: 1, pees: 1, poops: 1)
+        )
+    }
+
+    func testHistoricalPlanUsesOnlyCheckupsAvailableBySelectedDay() {
+        var older = Checkup.new(at: date(30, 10))
+        older.weightKg = 3.4
+        older.feedsMin = 9
+        var newer = Checkup.new(
+            at: calendar.date(
+                from: DateComponents(year: 2026, month: 9, day: 2, hour: 10)
+            )!
+        )
+        newer.weightKg = 3.8
+        newer.feedsMin = 10
+        let selectedDay = date(31, 23)
+        let serverNow = calendar.date(
+            from: DateComponents(year: 2026, month: 9, day: 3, hour: 12)
+        )!
+        let state = ServerState(
+            timezone: "America/New_York",
+            now: serverNow,
+            nextFeedAt: nil,
+            intervalMinutes: 120,
+            profile: Profile(birthAt: birth, feedIntervalMinutes: 120),
+            checkups: [newer, older],
+            activeCheckupId: newer.id,
+            today: .empty,
+            events: []
+        )
+
+        XCTAssertEqual(state.activeCheckup(at: selectedDay)?.id, older.id)
+        XCTAssertEqual(state.currentWeightKg(at: selectedDay), 3.4)
+    }
+
     func testGoalsFallBackToGuidanceWithoutCheckup() {
         let goals = DailyGoals.resolve(checkup: nil, weightKg: 3.4, day: 4, hoursOfAge: 87, defaultIntervalMinutes: 120)
         XCTAssertEqual(goals.feeds.value, 8...12)

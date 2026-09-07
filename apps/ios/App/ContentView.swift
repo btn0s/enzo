@@ -6,6 +6,7 @@ struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @State private var settingsRoute: SettingsRoute?
+    @State private var selectedDayOffset = 0
 
     var body: some View {
         NavigationStack {
@@ -106,14 +107,6 @@ struct ContentView: View {
                     SettingsIndexView(model: model)
                         .presentationDetents([.large])
                         .presentationDragIndicator(.visible)
-                case .goals:
-                    GoalsExplainerSheet(
-                        profile: profile,
-                        goals: model.goals(),
-                        unit: model.volumeUnit
-                    )
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
                 case .eventLog:
                     EventLogView(model: model)
                         .presentationDetents([.large])
@@ -267,16 +260,69 @@ struct ContentView: View {
     }
 
     private var compactTodayCard: some View {
-        let metrics = todayDashboardMetrics
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 12) {
+                ForEach(oldestDayOffset...0, id: \.self) { dayOffset in
+                    dailySummaryCard(
+                        on: date(forDayOffset: dayOffset),
+                        dayOffset: dayOffset
+                    )
+                    .containerRelativeFrame(.horizontal)
+                    .id(dayOffset)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollIndicators(.hidden)
+        .scrollClipDisabled()
+        .scrollTargetBehavior(.viewAligned(limitBehavior: .alwaysByOne))
+        .scrollPosition(id: selectedDayBinding)
+        .accessibilityAction(named: "Show older day") {
+            showOlderDay()
+        }
+        .accessibilityAction(named: "Show newer day") {
+            showNewerDay()
+        }
+        .onChange(of: oldestDayOffset) { _, oldestOffset in
+            if selectedDayOffset < oldestOffset {
+                selectedDayOffset = oldestOffset
+            }
+        }
+    }
+
+    private func dailySummaryCard(on date: Date, dayOffset: Int) -> some View {
+        let metrics = dashboardMetrics(on: date, dayOffset: dayOffset)
 
         return VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Today")
-                    .font(.title2.weight(.bold))
-                Spacer()
-                Text("\(Date.now.formatted(.dateTime.month(.abbreviated).day())) · Day \(profile.dayOfLife())")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(EnzoPalette.muted)
+            HStack(alignment: .center, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title(for: date, dayOffset: dayOffset))
+                        .font(.title2.weight(.bold))
+                    Text("\(formattedDate(date)) · Day \(profile.dayOfLife(on: date, calendar: careCalendar))")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(EnzoPalette.muted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                Spacer(minLength: 4)
+
+                HStack(spacing: 0) {
+                    dayNavigationButton(
+                        systemName: "chevron.left",
+                        label: "Show older day",
+                        disabled: dayOffset <= oldestDayOffset
+                    ) {
+                        setDayOffset(dayOffset - 1)
+                    }
+                    dayNavigationButton(
+                        systemName: "chevron.right",
+                        label: "Show newer day",
+                        disabled: dayOffset >= 0
+                    ) {
+                        setDayOffset(dayOffset + 1)
+                    }
+                }
             }
 
             LazyVGrid(
@@ -286,37 +332,20 @@ struct ContentView: View {
                 ],
                 spacing: 12
             ) {
-                todayMetricTile(metrics.feed)
-                todayMetricTile(metrics.milk)
-                todayMetricTile(metrics.pee)
-                todayMetricTile(metrics.poop)
+                dailyMetricTile(metrics.feed)
+                dailyMetricTile(metrics.milk)
+                dailyMetricTile(metrics.pee)
+                dailyMetricTile(metrics.poop)
             }
-
-            Button {
-                settingsRoute = .goals
-            } label: {
-                HStack(spacing: 8) {
-                    Label("How goals are calculated", systemImage: "target")
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.bold))
-                }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(EnzoPalette.muted)
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Shows the guidance and checkup values behind today’s targets")
         }
         .padding(18)
         .background(EnzoPalette.surface, in: .rect(cornerRadius: 24))
+        .clipShape(.rect(cornerRadius: 24))
         .shadow(color: .black.opacity(0.045), radius: 1, y: 1)
         .shadow(color: .black.opacity(0.045), radius: 12, y: 5)
     }
 
-    private func todayMetricTile(_ metric: TodayTileMetrics) -> some View {
+    private func dailyMetricTile(_ metric: TodayTileMetrics) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(metric.title)
@@ -332,6 +361,7 @@ struct ContentView: View {
             Text(metric.value)
                 .font(.system(.title2, design: .rounded, weight: .bold))
                 .monospacedDigit()
+                .contentTransition(.numericText())
                 .minimumScaleFactor(0.75)
                 .lineLimit(1)
 
@@ -346,57 +376,159 @@ struct ContentView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var todayDashboardMetrics: TodayDashboardMetrics {
-        let today = model.state?.today
-        let goals = model.goals()
-        let feeds = today?.feeds ?? 0
-        let milkMl = today?.milkMl ?? 0
-        let pees = today?.pees ?? 0
-        let poops = today?.poops ?? 0
+    private func dayNavigationButton(
+        systemName: String,
+        label: String,
+        disabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.caption.weight(.bold))
+                .frame(width: 40, height: 40)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(disabled ? EnzoPalette.muted.opacity(0.28) : EnzoPalette.accent)
+        .disabled(disabled)
+        .accessibilityLabel(label)
+    }
+
+
+    private func showOlderDay() {
+        setDayOffset(selectedDayOffset - 1)
+    }
+
+    private func showNewerDay() {
+        setDayOffset(selectedDayOffset + 1)
+    }
+
+    private func setDayOffset(_ offset: Int) {
+        guard oldestDayOffset...0 ~= offset else { return }
+        withAnimation(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0)) {
+            selectedDayOffset = offset
+        }
+    }
+
+    private var selectedDayBinding: Binding<Int?> {
+        Binding(
+            get: { selectedDayOffset },
+            set: { offset in
+                if let offset {
+                    selectedDayOffset = offset
+                }
+            }
+        )
+    }
+
+    private var careCalendar: Calendar {
+        model.state?.careCalendar ?? .current
+    }
+
+    private var oldestDayOffset: Int {
+        -profile.dayOfLife(on: Date.now, calendar: careCalendar)
+    }
+
+    private func date(forDayOffset offset: Int) -> Date {
+        let today = careCalendar.startOfDay(for: Date.now)
+        return careCalendar.date(byAdding: .day, value: offset, to: today) ?? today
+    }
+
+    private func goalReferenceDate(for date: Date, dayOffset: Int) -> Date {
+        guard dayOffset < 0,
+              let nextDay = careCalendar.date(byAdding: .day, value: 1, to: date) else {
+            return Date.now
+        }
+        return nextDay.addingTimeInterval(-1)
+    }
+
+    private func title(for date: Date, dayOffset: Int) -> String {
+        switch dayOffset {
+        case 0:
+            return "Today"
+        case -1:
+            return "Yesterday"
+        default:
+            var style = Date.FormatStyle().weekday(.wide)
+            style.timeZone = careCalendar.timeZone
+            return date.formatted(style)
+        }
+    }
+
+    private func formattedDate(_ date: Date) -> String {
+        var style = Date.FormatStyle().month(.abbreviated).day()
+        style.timeZone = careCalendar.timeZone
+        return date.formatted(style)
+    }
+
+    private func dashboardMetrics(on date: Date, dayOffset: Int) -> TodayDashboardMetrics {
+        let summary = model.state?.summary(on: date) ?? .empty
+        let goals = model.goals(now: goalReferenceDate(for: date, dayOffset: dayOffset))
 
         return TodayDashboardMetrics(
             feed: TodayTileMetrics(
                 title: "Feeds",
-                value: "\(feeds)",
+                value: "\(summary.feeds)",
                 goal: "Goal \(integerRange(goals.feeds.value))",
-                status: DailyReference.pace(
-                    current: Double(feeds),
+                status: dailyStatus(
+                    current: Double(summary.feeds),
                     goal: Double(goals.feeds.value.lowerBound),
-                    slack: 1
+                    slack: 1,
+                    dayOffset: dayOffset
                 )
             ),
             milk: TodayTileMetrics(
                 title: "Milk",
-                value: model.volumeUnit.format(ml: milkMl),
+                value: model.volumeUnit.format(ml: summary.milkMl),
                 goal: goals.dailyMilkMl.map {
                     "Goal \(model.volumeUnit.format(range: $0.value))"
                 } ?? "Add weight in Checkups",
-                status: DailyReference.pace(
-                    current: milkMl,
+                status: dailyStatus(
+                    current: summary.milkMl,
                     goal: goals.dailyMilkMl.map { $0.value.lowerBound },
-                    slack: 30
+                    slack: 30,
+                    dayOffset: dayOffset
                 )
             ),
             pee: TodayTileMetrics(
                 title: "Pee",
-                value: "\(pees)",
+                value: "\(summary.pees)",
                 goal: goals.peeMin.map { "Goal \($0.value)+" } ?? "Tracking only",
-                status: DailyReference.pace(
-                    current: Double(pees),
+                status: dailyStatus(
+                    current: Double(summary.pees),
                     goal: goals.peeMin.map { Double($0.value) },
-                    slack: 1
+                    slack: 1,
+                    dayOffset: dayOffset
                 )
             ),
             poop: TodayTileMetrics(
                 title: "Poop",
-                value: "\(poops)",
+                value: "\(summary.poops)",
                 goal: goals.poopMin.map { "Goal \($0.value)+" } ?? "Tracking only",
-                status: DailyReference.pace(
-                    current: Double(poops),
+                status: dailyStatus(
+                    current: Double(summary.poops),
                     goal: goals.poopMin.map { Double($0.value) },
-                    slack: 1
+                    slack: 1,
+                    dayOffset: dayOffset
                 )
             )
+        )
+    }
+
+    private func dailyStatus(
+        current: Double,
+        goal: Double?,
+        slack: Double,
+        dayOffset: Int
+    ) -> PaceStatus {
+        if dayOffset < 0 {
+            return DailyReference.completion(current: current, goal: goal)
+        }
+        return DailyReference.pace(
+            current: current,
+            goal: goal,
+            slack: slack,
+            calendar: careCalendar
         )
     }
 
@@ -610,12 +742,17 @@ struct DiaperGlyph: View {
     }
 }
 
-private enum SettingsRoute: String, Identifiable {
+
+private enum SettingsRoute: Identifiable {
     case settings
-    case goals
     case eventLog
 
-    var id: String { rawValue }
+    var id: String {
+        switch self {
+        case .settings: "settings"
+        case .eventLog: "event-log"
+        }
+    }
 }
 
 private extension PaceStatus {
@@ -624,13 +761,14 @@ private extension PaceStatus {
         case .belowPace: "arrow.down.circle.fill"
         case .onPace: "clock.fill"
         case .goalMet: "checkmark.circle.fill"
+        case .goalNotMet: "xmark.circle.fill"
         case .tracking: "minus.circle"
         }
     }
 
     var color: Color {
         switch self {
-        case .belowPace: EnzoPalette.attention
+        case .belowPace, .goalNotMet: EnzoPalette.attention
         case .goalMet: EnzoPalette.success
         case .onPace, .tracking: EnzoPalette.muted
         }
@@ -641,6 +779,7 @@ private extension PaceStatus {
         case .belowPace: "Below pace"
         case .onPace: "On pace"
         case .goalMet: "Goal met"
+        case .goalNotMet: "Goal not met"
         case .tracking: "Tracking"
         }
     }

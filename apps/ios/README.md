@@ -15,11 +15,12 @@
 - A bottom action bar puts Add feed and Add diaper one tap away.
 - Manual entry uses compact bottom sheets with smart defaults. Diaper is one flow
   with independent Pee and Poop checkboxes, so either or both can be saved.
-- The Today card shows age-aware goals for milk, feeds per day, and wet/dirty
-  diapers, with a "How goals are calculated" sheet citing sources. Enzo's birth
-  date and time are set in Settings (default August 28, 2026, 9 PM); the birth
-  day is day 0. Volumes display in ounces by default, switchable to milliliters
-  in Settings or per feed; the server always stores milliliters.
+- The daily card shows age-aware goals for milk, feeds per day, and wet/dirty
+  diapers. Swipe horizontally or use the arrow controls to browse prior days;
+  completed days show their final goal status. Enzo's birth date and time are
+  set in Settings (default August 28, 2026, 9 PM); the birth day is day 0.
+  Volumes display in ounces by default, switchable to milliliters in Settings
+  or per feed; the server always stores milliliters.
 
 ## General guidance encoded in the prototype
 
@@ -37,9 +38,10 @@ The shared feed interval is set in Settings → Feed schedule (two hours by
 default). Checkups stored in D1 record weight and anything the doctor changed —
 bottle size, feed interval, feeds/day, daily milk, or pee/poop minimums. The
 latest past checkup wins per field; blank fields fall back to guidance or the
-shared feed-interval setting. The Today card and goals sheet label each number's
-source. Pace icons compare today's count with the goal scaled to the time of
-day. Guidance tables live in `App/DailyInsights.swift`.
+shared feed-interval setting. Historical daily cards resolve the plan and latest
+recorded weight as of that day. Pace icons compare today's count with the goal
+scaled to the time of day; completed days show whether each goal was met.
+Guidance tables live in `App/DailyInsights.swift`.
 
 ## Generate and run
 

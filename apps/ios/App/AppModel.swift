@@ -60,12 +60,12 @@ final class AppModel {
         state?.profile.feedIntervalMinutes ?? state?.intervalMinutes ?? 120
     }
 
-    /// Today's goals: active checkup on top of guidance.
+    /// Goals in effect at a point in time: latest checkup on top of guidance.
     func goals(now: Date = Date()) -> DailyGoals {
         DailyGoals.resolve(
-            checkup: state?.activeCheckup,
-            weightKg: state?.currentWeightKg,
-            day: profile.dayOfLife(on: now),
+            checkup: state?.activeCheckup(at: now),
+            weightKg: state?.currentWeightKg(at: now),
+            day: profile.dayOfLife(on: now, calendar: state?.careCalendar ?? .current),
             hoursOfAge: profile.hoursOfAge(at: now),
             defaultIntervalMinutes: defaultFeedIntervalMinutes
         )
